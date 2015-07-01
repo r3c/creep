@@ -8,15 +8,7 @@ import shutil
 import sys
 import tempfile
 
-def deploy (logger, environments, modifiers, name, files, rev_from, rev_to):
-	# Retrieve environment configuration
-	environment = environments.get (name)
-
-	if environment is None:
-		logger.error ('No environment "{0}", can\'t deploy'.format (name))
-
-		return False
-
+def deploy (logger, environment, modifiers, name, files, rev_from, rev_to):
 	# Build target from environment connection string
 	target = creep.target.build (environment.connection, environment.options)
 
@@ -48,7 +40,7 @@ def deploy (logger, environments, modifiers, name, files, rev_from, rev_to):
 		rev_from = revisions.get (name)
 
 		if rev_from is None and not prompt (logger, 'Could not read revision, initiate full deploy? [Y/N]'):
-			return False
+			return True
 
 	if rev_to is None:
 		rev_to = source.current ()
@@ -114,8 +106,6 @@ def deploy (logger, environments, modifiers, name, files, rev_from, rev_to):
 			actions.append (creep.Action (environment.revisions, creep.Action.ADD))
 
 		if not target.send (logger, work, actions):
-			logger.error ('Deployment failed')
-
 			return False
 
 		if environment.local:
@@ -148,13 +138,13 @@ def prompt (logger, question):
 		logger.warning ('Invalid answer')
 
 # Parse command line options
-parser = argparse.ArgumentParser (description = 'Perform full or incremental deployment, from Git/SVN/plain workspace to FTP/SSH/local remote')
+parser = argparse.ArgumentParser (description = 'Perform full or incremental deployment, from Git/SVN/plain workspace to FTP/SSH/local remote.')
 parser.add_argument ('names', nargs = '*', help = 'Specify target environment name')
-parser.add_argument ('-a', '--extra-add', action = 'append', default = [], help = 'Specify extra local file to add', metavar = 'PATH')
-parser.add_argument ('-d', '--extra-del', action = 'append', default = [], help = 'Specify extra local file to delete', metavar = 'PATH')
-parser.add_argument ('-e', '--envs', action = 'store', default = '.creep.envs', help = 'Specify environments file path', metavar = 'PATH')
+parser.add_argument ('-a', '--extra-add', action = 'append', default = [], help = 'Extra local file to add', metavar = 'PATH')
+parser.add_argument ('-d', '--extra-del', action = 'append', default = [], help = 'Extra local file to delete', metavar = 'PATH')
+parser.add_argument ('-e', '--envs', action = 'store', default = '.creep.envs', help = 'Environments file path', metavar = 'PATH')
 parser.add_argument ('-f', '--rev-from', action = 'store', help = 'Initial version used to compute diff', metavar = 'REV')
-parser.add_argument ('-m', '--mods', action = 'store', default = '.creep.mods', help = 'Specify modifiers file path', metavar = 'PATH')
+parser.add_argument ('-m', '--mods', action = 'store', default = '.creep.mods', help = 'Modifiers file path', metavar = 'PATH')
 parser.add_argument ('-t', '--rev-to', action = 'store', help = 'Target version used to compute diff', metavar = 'REV')
 parser.add_argument ('-v', '--verbose', action = 'store_true', help = 'Increase verbosity')
 parser.add_argument ('-y', '--yes', action = 'store_true', help = 'Always answer yes to prompts')
@@ -181,6 +171,19 @@ yes = args.yes
 if len (args.names) < 1:
 	args.names.append ('default')
 
+code = 0
+
 for name in args.names:
-	if not deploy (logger, environments, modifiers, name, files, args.rev_from, args.rev_to):
-		break
+	# Retrieve environment configuration
+	environment = environments.get (name)
+
+	if environment is None:
+		logger.error ('No environment \'{0}\''.format (name))
+
+		code = 1
+	elif not deploy (logger, environment, modifiers, name, files, args.rev_from, args.rev_to):
+		logger.error ('Deployment to environment \'{0}\' failed'.format (name))
+
+		code = 1
+
+sys.exit (code)
