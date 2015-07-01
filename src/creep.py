@@ -48,6 +48,7 @@ def deploy (logger, environment, modifiers, name, files, rev_from, rev_to):
 	revisions.set (name, rev_to)
 
 	# Prepare actions
+	data = rev_from <> rev_to and revisions.serialize () or None
 	work = tempfile.mkdtemp ()
 
 	try:
@@ -82,12 +83,19 @@ def deploy (logger, environment, modifiers, name, files, rev_from, rev_to):
 		for delete in deletes:
 			os.remove (os.path.join (work, delete))
 
+		# Update current revision (remove mode)
+		if data is not None and not environment.local:
+			with open (os.path.join (work, environment.revisions), 'wb') as file:
+				file.write (data)
+
+			actions.append (creep.Action (environment.revisions, creep.Action.ADD))
+
+		# Display processed actions using console target
 		if len (actions) < 1:
 			logger.info ('No action')
 
 			return True
 
-		# Display processed actions using console target
 		from creep.targets.console import ConsoleTarget
 
 		console = ConsoleTarget ()
@@ -97,18 +105,11 @@ def deploy (logger, environment, modifiers, name, files, rev_from, rev_to):
 			return True
 
 		# Execute processed actions using actual target
-		data = revisions.serialize ()
-
-		if not environment.local:
-			with open (os.path.join (work, environment.revisions), 'wb') as file:
-				file.write (data)
-
-			actions.append (creep.Action (environment.revisions, creep.Action.ADD))
-
 		if not target.send (logger, work, actions):
 			return False
 
-		if environment.local:
+		# Update current revision (local mode)
+		if data is not None and environment.local:
 			with open (environment.revisions, 'wb') as file:
 				file.write (data)
 

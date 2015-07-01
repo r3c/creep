@@ -69,7 +69,7 @@ class FTPTarget:
 					if type == Action.ADD:
 						# Create missing parent directories
 						if create:
-							for parent in ('/'.join (names[0:n]) for n in range (1, len (names))):
+							for parent in ('/'.join (names[0:n + 1]) for n in range (0, len (names))):
 								try:
 									ftp.mkd (parent)
 								except ftplib.error_perm, e:
