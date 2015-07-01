@@ -11,11 +11,11 @@ def build (connection, options):
 		return None
 
 	host = match.group (4)
-	password = urllib.unquote_plus (match.group (3))
+	password = match.group (3) is not None and urllib.unquote_plus (match.group (3)) or match.group (3)
 	path = match.group (6) or '.'
 	port = match.group (5) is not None and int (match.group (5)) or None
 	scheme = match.group (1)
-	user = urllib.unquote_plus (match.group (2))
+	user = match.group (2) is not None and urllib.unquote_plus (match.group (2)) or match.group (2)
 
 	if scheme == 'console':
 		from targets.console import ConsoleTarget
@@ -27,10 +27,10 @@ def build (connection, options):
 
 		return FTPTarget (host, port, user, password, path, options)
 
-#	if scheme == 'local':
-#		from targets.ssh import LocalTarget
+	if scheme == 'local':
+		from targets.local import LocalTarget
 
-#		return LocalTarget (path)
+		return LocalTarget (path)
 
 	if scheme == 'ssh':
 		from targets.ssh import SSHTarget
