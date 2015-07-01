@@ -1,0 +1,22 @@
+#!/usr/bin/env python
+
+from ..action import Action
+
+class ConsoleTarget:
+	def read (self, path):
+		raise Error ('can\'t read from console target')
+
+	def send (self, logger, work, actions):
+		for action in actions:
+			if action.type == action.ADD:
+				prefix = '((lime))+'
+			elif action.type == action.DEL:
+				prefix = '((blue))-'
+			elif action.type == action.NOP:
+				prefix = '((silver))#'
+			else:
+				prefix = '((red))!'
+
+			logger.info (prefix + '((reset)) ' + action.path)
+
+		return True
