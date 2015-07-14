@@ -65,9 +65,14 @@ def deploy (logger, environment, modifiers, name, files, rev_from, rev_to):
 		# Append commands from manually specified files
 		for action in files:
 			if action.type == creep.Action.ADD:
-				shutil.copyfile (action.path, os.path.join (work, action.path))
+				path = os.path.join (work, action.path)
 
-			commands.append (action)
+				if not os.path.isdir (os.path.dirname (path)):
+					os.makedirs (os.path.dirname (path))
+
+				shutil.copyfile (action.path, path)
+
+		commands.extend (files)
 
 		# Apply pre-processing modifiers on actions
 		actions = []
@@ -141,8 +146,8 @@ def prompt (logger, question):
 # Parse command line options
 parser = argparse.ArgumentParser (description = 'Perform full or incremental deployment, from Git/SVN/plain workspace to FTP/SSH/local remote.')
 parser.add_argument ('names', nargs = '*', help = 'Specify target environment name')
-parser.add_argument ('-a', '--extra-add', action = 'append', default = [], help = 'Extra local file to add', metavar = 'PATH')
-parser.add_argument ('-d', '--extra-del', action = 'append', default = [], help = 'Extra local file to delete', metavar = 'PATH')
+parser.add_argument ('-a', '--extra-add', action = 'append', default = [], help = 'Extra local file/dir to add', metavar = 'PATH')
+parser.add_argument ('-d', '--extra-del', action = 'append', default = [], help = 'Extra local file/dir to delete', metavar = 'PATH')
 parser.add_argument ('-e', '--envs', action = 'store', default = '.creep.envs', help = 'Environments file path', metavar = 'PATH')
 parser.add_argument ('-f', '--rev-from', action = 'store', help = 'Initial version used to compute diff', metavar = 'REV')
 parser.add_argument ('-m', '--mods', action = 'store', default = '.creep.mods', help = 'Modifiers file path', metavar = 'PATH')
@@ -156,10 +161,20 @@ args = parser.parse_args ()
 files = []
 
 for path in args.extra_add:
-	files.append (creep.Action (path, creep.Action.ADD))
+	if os.path.isdir (path):
+		for (dirpath, dirnames, filenames) in os.walk (path):
+			files.extend ((creep.Action (os.path.join (dirpath, filename), creep.Action.ADD) for filename in filenames))
+	elif os.path.isfile (path):
+		files.append (creep.Action (path, creep.Action.ADD))
+	else:
+		logger.error ('Can\'t add missing file \'{0}\''.format (path))
 
 for path in args.extra_del:
-	files.append (creep.Action (path, creep.Action.DEL))
+	if os.path.isdir (path):
+		for (dirpath, dirnames, filenames) in os.walk (path):
+			files.extend ((creep.Action (os.path.join (dirpath, filename), creep.Action.DEL) for filename in filenames))
+	else:
+		files.append (creep.Action (path, creep.Action.DEL))
 
 # Perform deployment
 logger = creep.Logger.build ()

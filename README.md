@@ -5,10 +5,10 @@ Overview
 --------
 
 Creep is an incremental deploy tool, allowing delta update from a Git
-repository or a regular directory into a FTP or SSH remote server. It thus
-allows deployment of any application where files needed on target servers
-(e.g. production) match files in your repository, meaning it works well with
-pure front-end websites or technologies like PHP.
+repository or a regular directory into a FTP or SSH remote server. It allows
+deployment of any application where files needed on target servers (e.g.
+production) match files in your repository, meaning it works well with pure
+front-end websites using HTML/CSS/JS or server technologies like PHP.
 
 Projects deployed through Creep should provide configuration file(s) to define
 _environments_ which are the different locations where deployment should happen
@@ -26,14 +26,14 @@ Installing
 
 To install Creep, checkout repository somewhere and create a symbolic link in
 your `$PATH` to main executable file `creep.py` (located in `src` directory).
-While this is not mandatory (you can prefer to call Creep using full path in
-command line), it's surely more convenient.
+While this is not mandatory (you can prefer to call Creep using full path to
+`creep.py`) it's surely more convenient.
 
     $ cd creep
     $ sudo ln -s src/creep.py /usr/bin/creep
     $ creep -h # display help
 
-Once Creep is install, go to your project folder and follow next section to
+Once Creep is installed go to your project folder and follow next section to
 create a your first environment configuration file.
 
 Environments
@@ -42,10 +42,14 @@ Environments
 Environments are named locations pointing to the servers you'll want to deploy
 your project to. They must be specified in a JSON file named `.creep.env` and
 located inside the directory which contains the file you want to deploy. This
-directory may be a sub-directory inside your project (e.g. the `src` folder in
-your Git repository), and you can even have multiple deployment configurations
-for a single project (e.g. when deploying a website you may have a
-configuration for static files and another for server code).
+directory will be used as the root for your deployment meaning that all files
+it contains will be deployed to targer destination, preserving the same
+hierarchical structure. You can use a sub-directory inside your project as your
+deployment root (e.g. the `src` folder in your Git repository) so you only
+deploy its content. You can also support multiple deployment configurations for
+a single project by having more than one environment file in different folders
+(e.g. one in your `src` folder to deploy server code, and another one in
+`assets` to deploy static files to different servers).
 
 Here is what an environments configuration file looks like:
 
@@ -173,4 +177,4 @@ This project is still under develpement and may not behave as you would expect.
 The `-v` (verbose) switch may help you understanding how your environments and
 modifiers files are used in case of issue.
 
-If you really can't figure out what's happening, feel free to contact me!
+If you really can't figure out what's happening, don't hesitate to contact me!
