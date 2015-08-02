@@ -109,7 +109,9 @@ def deploy (logger, environment, modifiers, name, files, rev_from, rev_to):
 		if not prompt (logger, 'Execute synchronization? [Y/N]'):
 			return True
 
-		# Execute processed actions using actual target
+		# Execute processed actions starting with "DEL" ones
+		actions.sort (key = lambda action: (action.type == creep.Action.DEL and 0 or 1, action.path))
+
 		if not target.send (logger, work, actions):
 			return False
 
