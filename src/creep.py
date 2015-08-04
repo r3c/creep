@@ -110,7 +110,7 @@ def deploy (logger, environment, modifiers, name, files, rev_from, rev_to):
 			return True
 
 		# Execute processed actions starting with "DEL" ones
-		actions.sort (key = lambda action: (action.type == creep.Action.DEL and 0 or 1, action.path))
+		actions.sort (key = lambda action: (action.type != creep.Action.DEL and 1 or 0, action.path))
 
 		if not target.send (logger, work, actions):
 			return False
