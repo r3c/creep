@@ -159,6 +159,10 @@ parser.add_argument ('-y', '--yes', action = 'store_true', help = 'Always answer
 
 args = parser.parse_args ()
 
+# Initialize logger
+logger = creep.Logger.build ()
+logger.setLevel (args.verbose and logging.DEBUG or logging.INFO)
+
 # Build extra files list
 files = []
 
@@ -179,9 +183,6 @@ for path in args.extra_del:
 		files.append (creep.Action (path, creep.Action.DEL))
 
 # Perform deployment
-logger = creep.Logger.build ()
-logger.setLevel (args.verbose and logging.DEBUG or logging.INFO)
-
 environments = creep.Environments (args.envs)
 modifiers = creep.Modifiers (args.mods)
 yes = args.yes
