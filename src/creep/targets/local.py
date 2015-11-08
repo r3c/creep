@@ -26,7 +26,7 @@ class LocalTarget:
 				if not os.path.exists (directory):
 					os.makedirs (directory)
 
-				shutil.copyfile (os.path.join (work, action.path), path)
+				shutil.copy (os.path.join (work, action.path), path)
 
 			elif action.type == action.DEL:
 				if os.path.isfile (path):

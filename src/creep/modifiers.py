@@ -95,7 +95,7 @@ class Modifiers:
 
 				# Otherwise, copy original to renamed
 				elif path <> path_new:
-					shutil.copyfile (os.path.join (work, path), os.path.join (work, path_new))
+					shutil.copy (os.path.join (work, path), os.path.join (work, path_new))
 
 					deletes.append (path)
 

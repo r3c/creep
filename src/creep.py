@@ -70,7 +70,7 @@ def deploy (logger, environment, modifiers, name, files, rev_from, rev_to):
 				if not os.path.isdir (os.path.dirname (path)):
 					os.makedirs (os.path.dirname (path))
 
-				shutil.copyfile (action.path, path)
+				shutil.copy (action.path, path)
 
 		commands.extend (files)
 

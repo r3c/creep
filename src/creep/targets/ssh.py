@@ -27,6 +27,7 @@ class SSHTarget:
 				for action in actions:
 					if action.type == Action.ADD:
 						tar.add (os.path.join (work, action.path), action.path)
+
 						to_add = True
 					elif action.type == Action.DEL:
 						to_del.append (self.ssh_path + '/' + action.path)
