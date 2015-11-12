@@ -40,7 +40,7 @@ Environments
 ------------
 
 Environments are named locations pointing to the servers you'll want to deploy
-your project to. They must be specified in a JSON file named `.creep.env` and
+your project to. They must be specified in a JSON file named `.creep.envs` and
 located inside the directory which contains the file you want to deploy. This
 directory will be used as the root for your deployment meaning that all files
 it contains will be deployed to targer destination, preserving the same
