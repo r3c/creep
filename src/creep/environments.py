@@ -6,9 +6,10 @@ import os
 class EnvironmentConfig:
 	def __init__ (self, config):
 		self.connection = config['connection']
+		self.delta = config.get ('delta', None)
 		self.local = config.get ('local', False)
 		self.options = config.get ('options', {})
-		self.revisions = config.get ('revisions', '.creep.revs')
+		self.state = config.get ('state', '.creep.revs')
 
 class Environments:
 	def __init__ (self, path):

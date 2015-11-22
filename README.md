@@ -55,7 +55,7 @@ Here is what an environments configuration file looks like:
 
     {
         "default": {
-            "connection": "local:///home/www-data/my-project/"
+            "connection": "file:///home/www-data/my-project/"
         },
         "integration": {
             "connection": "ftp://me:password@my-dev-server/www-data/"
@@ -65,23 +65,23 @@ Here is what an environments configuration file looks like:
         }
     }
 
-Each location (`default` and `production` in this example) must at least
-specify a connection string specifying protocol and optional address,
-credentials and/or path. Creep can currently deploy through local file system
-copy, FTP or SSH, and some extra options may be specified depending on this
-protocol.
+Each location (`default`, `integration` and `production` in this example) must
+specify a connection string defining a protocol and optional address,
+credentials and/or path. Creep can currently deploy through local file system,
+FTP or SSH, and some extra options may be specified depending on the protocol.
 
-- To deploy locally, connection string should be `local://path` where path is
-relative to current directory (note the triple `/` in example above to get an
-absolute path).
-- To deploy through FTP connection string is `ftp://user:pass@host:port/path`
-where `user` and `pass` are optional FTP credentials (anonymous login will be
-used if they're missing), `port` is an optional FTP port which defaults to 21,
-and `path` is a path relative to FTP user home directory.
-- To deploy through SSH connection string is `ssh://user@host:port/path` where
-variables are similar to the ones used for FTP deployment. Password can't be
-specified here, so you'll need to either enter password manually or setup SSH
-keys and start SSH agent.
+- To deploy locally connection string must be set to `file://path` where path
+is relative to current directory (note the triple `/` in example above to get
+an absolute path).
+- To deploy through FTP connection string must be set to
+`ftp://user:pass@host:port/path` where `user` and `pass` are optional FTP
+credentials (anonymous login will be used if they're missing), `port` is an
+optional FTP port which defaults to 21, and `path` is a path relative to FTP
+user home directory.
+- To deploy through SSH connection string must be set to
+`ssh://user@host:port/path` where variables are similar to the ones used for
+FTP deployment. Password can't be specified here, so you'll need to either
+enter password manually or setup SSH keys and start SSH agent.
 
 Once environments configuration file is ready you can start using Creep. Just
 type `creep <env>` (or full path to `creep.py` if you didn't add it to your

@@ -3,7 +3,7 @@
 import os
 import shutil
 
-class LocalTarget:
+class FileTarget:
 	def __init__ (self, path):
 		self.path = path
 

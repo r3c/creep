@@ -13,25 +13,25 @@ def deploy (logger, environment, modifiers, name, files, rev_from, rev_to):
 	target = creep.target.build (environment.connection, environment.options)
 
 	if target is None:
-		logger.error ('Unsupported environment connection string "{0}"'.format (environment.connection))
+		logger.error ('Unsupported scheme in connection string "{1}" for environment "{0}"'.format (name, environment.connection))
 
 		return False
 
 	# Read revisions file
 	if not environment.local:
-		data = target.read (logger, environment.revisions)
-	elif os.path.exists (environment.revisions):
-		data = open (environment.revisions, 'rb').read ()
+		data = target.read (logger, environment.state)
+	elif os.path.exists (environment.state):
+		data = open (environment.state, 'rb').read ()
 	else:
 		data = None
 
 	revisions = creep.Revisions (data)
 
 	# Build source repository reader from current directory
-	source = creep.source.build (os.getcwd ())
+	source = creep.source.build (environment.delta, os.getcwd ())
 
 	if source is None:
-		logger.error ('Can\'t recognize supported workspace in directory "{0}"'.format (os.getcwd ()))
+		logger.error ('Can\'t recognize workspace type in folder "{1}" for environment "{0}"'.format (name, os.getcwd ()))
 
 		return False
 
@@ -39,7 +39,7 @@ def deploy (logger, environment, modifiers, name, files, rev_from, rev_to):
 	if rev_from is None:
 		rev_from = revisions.get (name)
 
-		if rev_from is None and not prompt (logger, 'Could not read revision, initiate full deploy? [Y/N]'):
+		if rev_from is None and not prompt (logger, 'Could not read current revision, maybe you\'re deploying for the first time. Initiate full deploy? [Y/N]'):
 			return True
 
 	if rev_to is None:
@@ -90,14 +90,14 @@ def deploy (logger, environment, modifiers, name, files, rev_from, rev_to):
 
 		# Update current revision (remove mode)
 		if data is not None and not environment.local:
-			with open (os.path.join (work, environment.revisions), 'wb') as file:
+			with open (os.path.join (work, environment.state), 'wb') as file:
 				file.write (data)
 
-			actions.append (creep.Action (environment.revisions, creep.Action.ADD))
+			actions.append (creep.Action (environment.state, creep.Action.ADD))
 
 		# Display processed actions using console target
 		if len (actions) < 1:
-			logger.info ('No action')
+			logger.info ('No synchronization action required')
 
 			return True
 
@@ -117,7 +117,7 @@ def deploy (logger, environment, modifiers, name, files, rev_from, rev_to):
 
 		# Update current revision (local mode)
 		if data is not None and environment.local:
-			with open (environment.revisions, 'wb') as file:
+			with open (environment.state, 'wb') as file:
 				file.write (data)
 
 		logger.info ('Deployment successfully completed')
@@ -146,7 +146,7 @@ def prompt (logger, question):
 		logger.warning ('Invalid answer')
 
 # Parse command line options
-parser = argparse.ArgumentParser (description = 'Perform full or incremental deployment, from Git/SVN/plain workspace to FTP/SSH/local remote.')
+parser = argparse.ArgumentParser (description = 'Perform full or incremental deployment, from Git/plain workspace to FTP/SSH/local folder.')
 parser.add_argument ('names', nargs = '*', help = 'Specify target environment name')
 parser.add_argument ('-a', '--extra-add', action = 'append', default = [], help = 'Extra local file/dir to add', metavar = 'PATH')
 parser.add_argument ('-d', '--extra-del', action = 'append', default = [], help = 'Extra local file/dir to delete', metavar = 'PATH')
@@ -197,7 +197,7 @@ for name in args.names:
 	environment = environments.get (name)
 
 	if environment is None:
-		logger.error ('No environment \'{0}\''.format (name))
+		logger.error ('There is no environment \'{0}\' in your environments file'.format (name))
 
 		code = 1
 	elif not deploy (logger, environment, modifiers, name, files, args.rev_from, args.rev_to):

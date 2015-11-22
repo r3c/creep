@@ -22,19 +22,20 @@ def build (connection, options):
 
 		return ConsoleTarget ()
 
+	if scheme == 'file':
+		from targets.file import FileTarget
+
+		return FileTarget (path)
+
 	if scheme == 'ftp':
 		from targets.ftp import FTPTarget
 
 		return FTPTarget (host, port, user, password, path, options)
-
-	if scheme == 'local':
-		from targets.local import LocalTarget
-
-		return LocalTarget (path)
 
 	if scheme == 'ssh':
 		from targets.ssh import SSHTarget
 
 		return SSHTarget (host, port, user, path)
 
+	# No known scheme recognized
 	return None
