@@ -68,20 +68,8 @@ Here is what an environments configuration file looks like:
 Each location (`default`, `integration` and `production` in this example) must
 specify a connection string defining a protocol and optional address,
 credentials and/or path. Creep can currently deploy through local file system,
-FTP or SSH, and some extra options may be specified depending on the protocol.
-
-- To deploy locally connection string must be set to `file://path` where path
-is relative to current directory (note the triple `/` in example above to get
-an absolute path).
-- To deploy through FTP connection string must be set to
-`ftp://user:pass@host:port/path` where `user` and `pass` are optional FTP
-credentials (anonymous login will be used if they're missing), `port` is an
-optional FTP port which defaults to 21, and `path` is a path relative to FTP
-user home directory.
-- To deploy through SSH connection string must be set to
-`ssh://user@host:port/path` where variables are similar to the ones used for
-FTP deployment. Password can't be specified here, so you'll need to either
-enter password manually or setup SSH keys and start SSH agent.
+FTP or SSH, and some extra options may be specified depending on the protocol
+; see below for details about protocols and options.
 
 Once environments configuration file is ready you can start using Creep. Just
 type `creep <env>` (or full path to `creep.py` if you didn't add it to your
@@ -111,6 +99,38 @@ you may prefer to store them locally instead. In that case just add a new
         ...
     }
 
+You can specify additional options depending on the protocol you're using. To
+specify options just add an "options" property containing required options as a
+JSON object:
+
+    {
+        "default": {
+            "connection": "ssh://www-data@localhost/www.mywebsite.com/",
+            "options": {
+                "extra": "-o StrictHostKeyChecking=no"
+            }
+        }
+    }
+
+Here are the supported protocols, expected connection string and available
+options for each of them:
+
+- Local FS:
+  - Use `file://path` where path is relative to current directory (note the
+    triple `/` in example above to get an absolute path).
+- FTP:
+  - Use `ftp://user:pass@host:port/path` where `user` and `pass` are optional
+    credentials (anonymous login will be used if they're missing), `port` is an
+    optional FTP port which defaults to 21, and `path` is a path relative to FTP
+    user home directory.
+  - Boolean option "passive" enables (default) or disables passive mode.
+- SSH:
+  - Use `ssh://user@host:port/path` where variables are similar to the ones used
+    for FTP deployment. Password can't be specified here, so you'll need to
+    either enter password manually or setup SSH keys and start SSH agent.
+  - String option "extra" can be used to pass additional parameters to SSH
+    command. 
+
 Modifiers
 ---------
 
@@ -119,11 +139,11 @@ some files before they're send to target environment. Creep supports three
 different kinds of modifiers:
 
 - _name_ modifiers can change the name of a file using regular expression
-search/replace ;
+  search/replace ;
 - _adapt_ modifiers can change the content of a file using a custom shell
-command ;
+  command ;
 - _link_ modifiers can link one or more files together so they're evaluated
-when their parent file is changed.
+  when their parent file is changed.
 
 Modifiers must be specified in a JSON file named `.creep.mods` located in the
 same folder(s) than your environment configuration file(s). Each file specifies
@@ -154,21 +174,21 @@ stops on the first matched pattern). Other (optional) properties are applied on
 files matching given pattern, if any.
 
 - `name` property specifies new name for file and supports back references on
-the regular expression used in `pattern`. In the example above, files ending
-with `.less` (matching `(.*)\.less$`) will have their extension changed to
-`.css` (the back reference `\\` captured original file name without extension
-in associated pattern).
+  the regular expression used in `pattern`. In the example above, files ending
+  with `.less` (matching `(.*)\.less$`) will have their extension changed to
+  `.css` (the back reference `\\` captured original file name without extension
+  in associated pattern).
 - `adapt` property specifies a shell command to be executed after replacing
-special `{}` sequence by path to file being matched. Output of this command
-will replace content of the file before it's sent to environment. In the
-example above executable `uglifyjs` is called to minify JavaScript files
-(maching `\.js$`). Note presence of first rule which matches files whose name
-ends with `.min.js`: it doesn't specify any action but prevents the other
-`\.js$` rule from being triggered as it's evaluated before. In this example, it
-prevents modified JavaScript files from being modified another time.
+  special `{}` sequence by path to file being matched. Output of this command
+  will replace content of the file before it's sent to environment. In the
+  example above executable `uglifyjs` is called to minify JavaScript files
+  (maching `\.js$`). Note presence of first rule which matches files whose name
+  ends with `.min.js`: it doesn't specify any action but prevents the other
+  `\.js$` rule from being triggered as it's evaluated before. In this example,
+  it prevents modified JavaScript files from being modified another time.
 - `link` property specifies a shell command similar to the one for `adapt`
-property, but this one should return path (relative to deployment directory) to
-all files that should be sent whenever matched ones are matched.
+  property, but this one should return path (relative to deployment directory)
+  to all files that should be sent whenever matched ones are matched.
 
 Troubleshooting
 ---------------

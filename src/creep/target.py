@@ -35,7 +35,7 @@ def build (connection, options):
 	if scheme == 'ssh':
 		from targets.ssh import SSHTarget
 
-		return SSHTarget (host, port, user, path)
+		return SSHTarget (host, port, user, path, options)
 
 	# No known scheme recognized
 	return None

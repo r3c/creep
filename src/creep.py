@@ -45,6 +45,11 @@ def deploy (logger, environment, modifiers, name, files, rev_from, rev_to):
 	if rev_to is None:
 		rev_to = source.current ()
 
+		if rev_to is None:
+			logger.error ('Can\'t find source version, please ensure your environment file is correctly defined')
+
+			return False
+
 	revisions.set (name, rev_to)
 
 	# Prepare actions
