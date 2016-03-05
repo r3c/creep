@@ -5,7 +5,7 @@ import urllib
 
 def build (connection, options):
 	# FIXME: should use urllib.parse
-	match = re.match ('([+0-9A-Za-z]+)://(?:([^#/:@]+)(?::([^#/@]+))?@)?(?:([^#/:]+)(?::([0-9]+))?)?(?:/+([^#]*))?', connection)
+	match = re.match ('([+0-9A-Za-z]+)://(?:([^#/:@]+)(?::([^#/@]+))?@)?(?:([^#/:]+)(?::([0-9]+))?)?(?:/([^#]*))?', connection)
 
 	if match is None:
 		return None
