@@ -49,7 +49,7 @@ class Modifiers:
 			if match is None:
 				continue
 
-			logger.debug ('File \'{0}\' matches \'{1}\''.format (path, rule.regex.pattern))
+			logger.debug ('File \'{0}\' matches \'{1}\'.'.format (path, rule.regex.pattern))
 
 			actions = []
 			deletes = []
@@ -58,7 +58,7 @@ class Modifiers:
 			if rule.name is not None:
 				name = os.path.basename (re.sub ('\\\\([0-9]+)', lambda m: match.group (int (m.group (1))), rule.name))
 
-				logger.debug ('File \'{0}\' renamed to \'{1}\''.format (path, name))
+				logger.debug ('File \'{0}\' renamed to \'{1}\'.'.format (path, name))
 
 			path_new = os.path.normpath (os.path.join (os.path.dirname (path), name))
 
@@ -69,14 +69,14 @@ class Modifiers:
 
 					if out is not None:
 						for link in out.splitlines ():
-							logger.debug ('File \'{1}\' linked to \'{0}\''.format (path, link))
+							logger.debug ('File \'{1}\' linked to \'{0}\'.'.format (path, link))
 
 							(actions_append, deletes_append) = self.apply (logger, work, link, type, used)
 
 							actions.extend (actions_append)
 							deletes.extend (deletes_append)
 					else:
-						logger.debug ('File \'{0}\' link command failed'.format (path))
+						logger.debug ('File \'{0}\' link command failed.'.format (path))
 
 				# Build output file using processing command if any
 				if rule.adapt is not None:
@@ -86,22 +86,22 @@ class Modifiers:
 						with open (os.path.join (work, path_new), 'wb') as file:
 							file.write (out)
 					else:
-						logger.debug ('File \'{0}\' apply command failed'.format (path))
+						logger.debug ('File \'{0}\' apply command failed.'.format (path))
 
 						type = Action.ERR
 
-					if path <> path_new:
+					if path != path_new:
 						deletes.append (path)
 
 				# Otherwise, copy original to renamed
-				elif path <> path_new:
+				elif path != path_new:
 					shutil.copy (os.path.join (work, path), os.path.join (work, path_new))
 
 					deletes.append (path)
 
 			# Apply filtering command if any
 			if rule.filter is not None and self.run (work, path, rule.filter) is None:
-				logger.debug ('File \'{0}\' filtered out'.format (path))
+				logger.debug ('File \'{0}\' filtered out.'.format (path))
 
 				type = Action.NOP
 

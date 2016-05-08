@@ -3,7 +3,7 @@
 import re
 import urllib
 
-def build (connection, options):
+def build (logger, connection, options):
 	# FIXME: should use urllib.parse [url-parse]
 	match = re.match ('([+0-9A-Za-z]+)://(?:([^#/:@]+)(?::([^#/@]+))?@)?(?:([^#/:]+)(?::([0-9]+))?)?(?:/([^#]*))?', connection)
 
@@ -17,12 +17,10 @@ def build (connection, options):
 	scheme = match.group (1)
 	user = match.group (2) is not None and urllib.unquote_plus (match.group (2)) or match.group (2)
 
-	if scheme == 'console':
-		from targets.console import ConsoleTarget
-
-		return ConsoleTarget ()
-
 	if scheme == 'file':
+		if host is not None or password is not None or port is not None or user is not None:
+			logger.warn ('Connection string for "file" scheme shouldn\'t contain any host, port, user or password.')
+
 		from targets.file import FileTarget
 
 		return FileTarget (directory)
@@ -33,6 +31,9 @@ def build (connection, options):
 		return FTPTarget (host, port, user, password, directory, options)
 
 	if scheme == 'ssh':
+		if host is not None or password is not None or port is not None or user is not None:
+			logger.warn ('Connection string for "ssh" scheme shouldn\'t contain any password.')
+
 		from targets.ssh import SSHTarget
 
 		return SSHTarget (host, port, user, directory, options)

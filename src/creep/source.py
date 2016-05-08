@@ -23,7 +23,7 @@ def build (diff, directory):
 def detect (directory):
 	names = explode (directory)
 
-	# Detect '.git' directory in parent folders
+	# Detect '.git' file or directory in parent folders
 	if any ((os.path.exists (os.path.join (*(names[0:n] + ['.git']))) for n in range (len (names), 0, -1))):
 		return 'git'
 

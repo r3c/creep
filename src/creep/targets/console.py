@@ -3,8 +3,8 @@
 from ..action import Action
 
 class ConsoleTarget:
-	def read (self, path):
-		raise Error ('can\'t read from console target')
+	def read (self, logger, path):
+		raise Exception ('can\'t read from console target')
 
 	def send (self, logger, work, actions):
 		for action in actions:

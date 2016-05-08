@@ -5,10 +5,10 @@ import os
 def explode (path):
 	names = []
 
-	while path <> '' and path <> '/':
+	while path != '' and path != '/':
 		(path, tail) = os.path.split (path)
 
-		if tail <> '':
+		if tail != '':
 			names.insert (0, tail)
 
 	if path == '/':

@@ -46,7 +46,7 @@ class DeltaSource:
 				if isinstance (entry_to, dict):
 					actions.extend (self.prepare (work, {}, entry_to, path))
 					action = entry_from is not None and Action (path, Action.DEL) or None
-				elif entry_from <> entry_to:
+				elif entry_from != entry_to:
 					action = Action (path, entry_to is not None and Action.ADD or Action.DEL)
 				else:
 					action = None

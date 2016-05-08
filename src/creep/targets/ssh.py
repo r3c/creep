@@ -41,12 +41,12 @@ class SSHTarget:
 
 			# Send and delete files on remote host
 			if to_add and Process (self.tunnel + ['tar xC \'' + pipes.quote (self.directory) + '\'']).set_stdin (archive.read ()).execute () is None:
-				logger.warning ('Couldn\'t push files to SSH target')
+				logger.warning ('Couldn\'t push files to SSH target.')
 
 				return False
 
 			if len (to_del) > 0 and Process (self.tunnel + ['sh']).set_stdin (';'.join (['rm -f \'' + pipes.quote (path) + '\'' for path in to_del])).execute () is None:
-				logger.warning ('Couldn\'t delete files from SSH target')
+				logger.warning ('Couldn\'t delete files from SSH target.')
 
 				return False
 

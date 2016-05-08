@@ -6,7 +6,7 @@ class Revisions:
 	def __init__ (self, data):
 		revs = {}	
 
-		if data <> '':
+		if data != '':
 			for (name, rev) in json.loads (data).iteritems ():
 				revs[name] = rev
 

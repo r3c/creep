@@ -13,7 +13,7 @@ class Process:
 		process = subprocess.Popen (self.args, cwd = self.directory, shell = self.shell, stdin = self.stdin and subprocess.PIPE or None, stdout = subprocess.PIPE)
 		output = process.communicate (input = self.stdin)
 
-		if process.returncode <> 0:
+		if process.returncode != 0:
 			return None
 
 		return output[0]
