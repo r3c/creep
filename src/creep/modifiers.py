@@ -8,11 +8,11 @@ from action import Action
 from process import Process
 
 class ModifierRule:
-	def __init__ (self, regex, name, filter, adapt, link):
-		self.adapt = adapt
+	def __init__ (self, regex, rename, filter, modify, link):
+		self.modify = modify
 		self.filter = filter
 		self.link = link
-		self.name = name
+		self.rename = rename
 		self.regex = regex
 
 class Modifiers:
@@ -22,12 +22,12 @@ class Modifiers:
 		if os.path.isfile (path):
 			with open (path, 'rb') as stream:
 				for rule in json.load (stream):
-					adapt = rule.get ('adapt', None)
+					modify = rule.get ('modify', rule.get ('adapt', None))
 					filter = rule.get ('filter', None)
 					link = rule.get ('link', None)
-					name = rule.get ('name', None)
+					rename = rule.get ('rename', rule.get ('name', None))
 
-					rules.append (ModifierRule (re.compile (rule['pattern']), name, filter, adapt, link))
+					rules.append (ModifierRule (re.compile (rule['pattern']), rename, filter, modify, link))
 
 		self.rules = rules
 
@@ -54,9 +54,9 @@ class Modifiers:
 			actions = []
 			deletes = []
 
-			# Apply name change expression if any
-			if rule.name is not None:
-				name = os.path.basename (re.sub ('\\\\([0-9]+)', lambda m: match.group (int (m.group (1))), rule.name))
+			# Apply renaming pattern if any
+			if rule.rename is not None:
+				name = os.path.basename (re.sub ('\\\\([0-9]+)', lambda m: match.group (int (m.group (1))), rule.rename))
 
 				logger.debug ('File \'{0}\' renamed to \'{1}\'.'.format (path, name))
 
@@ -69,24 +69,24 @@ class Modifiers:
 
 					if out is not None:
 						for link in out.splitlines ():
-							logger.debug ('File \'{1}\' linked to \'{0}\'.'.format (path, link))
+							logger.debug ('File \'{0}\' is linked to file \'{1}\'.'.format (path, link))
 
 							(actions_append, deletes_append) = self.apply (logger, work, link, type, used)
 
 							actions.extend (actions_append)
 							deletes.extend (deletes_append)
 					else:
-						logger.debug ('File \'{0}\' link command failed.'.format (path))
+						logger.debug ('Command \'link\' on file \'{0}\' returned non-zero code.'.format (path))
 
 				# Build output file using processing command if any
-				if rule.adapt is not None:
-					out = self.run (work, path, rule.adapt)
+				if rule.modify is not None:
+					out = self.run (work, path, rule.modify)
 
 					if out is not None:
 						with open (os.path.join (work, path_new), 'wb') as file:
 							file.write (out)
 					else:
-						logger.debug ('File \'{0}\' apply command failed.'.format (path))
+						logger.debug ('Command \'modify\' on file \'{0}\' returned non-zero code.'.format (path))
 
 						type = Action.ERR
 

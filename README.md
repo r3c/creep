@@ -55,13 +55,13 @@ Here is what an environments configuration file looks like:
 
     {
         "default": {
-            "connection": "file:///home/www-data/my-project/"
+            "connection": "file:///../webdev/my-project"
         },
         "integration": {
-            "connection": "ftp://me:password@my-dev-server/www-data/"
+            "connection": "ftp://me:password@my-dev-server/www-data"
         },
         "production": {
-            "connection": "ssh://login@my-prod-server.com/www-data/"
+            "connection": "ssh://login@my-prod-server.com/www-data"
         }
     }
 
@@ -157,41 +157,57 @@ Here is what a modifiers configuration file looks like:
 
     [
         {
+            "pattern": "\\.dist$",
+            "filter": "false"
+        },
+        {
             "pattern": "\\.min\\.js$"
         },
         {
             "pattern": "\\.js$",
-            "adapt": "uglifyjs --compress --mangle -- '{}'"
+            "modify": "uglifyjs --compress --mangle -- '{}'"
         },
         {
             "pattern": "(.*)\\.less$",
-            "adapt": "lessc --clean-css '{}'",
-            "name": "\\1.css"
+            "modify": "lessc --clean-css '{}'",
+            "link": "find . -name '*.less' | xargs grep -Fl \"$(basename '{}')\" || true",
+            "rename": "\\1.css"
         }
     ]
 
 Each rule must specify matched files using a regular expression in `pattern`
-property (remember that backslashes must be escaped in JSON) Rules are
-evaluated in sequence and each file can only match one single rule (evaluation
-stops on the first matched pattern). Other (optional) properties are applied on
-files matching given pattern, if any.
+property (remember that backslashes must be escaped in JSON, hence the double
+`\\` used in this file). Rules are evaluated in sequence and each file can only
+match one single rule (evaluation stops after the first matched pattern). Other
+(optional) actions are applied on files matching given pattern, if any.
 
-- `name` property specifies new name for file and supports back references on
-  the regular expression used in `pattern`. In the example above, files ending
-  with `.less` (matching `(.*)\.less$`) will have their extension changed to
-  `.css` (the back reference `\\` captured original file name without extension
-  in associated pattern).
-- `adapt` property specifies a shell command to be executed after replacing
-  special `{}` sequence by path to file being matched. Output of this command
-  will replace content of the file before it's sent to environment. In the
-  example above executable `uglifyjs` is called to minify JavaScript files
-  (maching `\.js$`). Note presence of first rule which matches files whose name
-  ends with `.min.js`: it doesn't specify any action but prevents the other
-  `\.js$` rule from being triggered as it's evaluated before. In this example,
-  it prevents modified JavaScript files from being modified another time.
-- `link` property specifies a shell command similar to the one for `adapt`
-  property, but this one should return path (relative to deployment directory)
-  to all files that should be sent whenever matched ones are matched.
+- `rename` action specifies a new name for file and supports back references on
+  the regular expression used in `pattern`.
+  - In the example above, files ending with `.less` will have their extension
+    changed to `.css`: the back reference `\\1` captured original file name
+    without extension in associated pattern.
+- `filter` specifies a shell command to be executed, where special `{}` token is
+  replaced by an absolute path to the file being matched. If this command
+  returns a non-zero result, file won't be sent to target location.
+  - In the example above, the `false` command is used to unconditionally exclude
+    files with name ending with `.dist` from deployment.
+- `modify` action specifies a shell command (similar to `filter` action).
+  Standard output of this command will replace content of the file before it's
+  sent to target location.
+  - In the example above, executable `uglifyjs` is called to minify JavaScript
+    files (ending with `.js`).
+  - Note presence of a rule which matches files with name ending with `.min.js`:
+    it doesn't specify any action but prevents the `\.js$` rule from being
+    triggered for files that are already minified.
+- `link` action specifies a shell command similar to the `adapt` one but is
+  expected to return a path (relative to deployment directory) to all files that
+  should be sent whenever matched ones are matched.
+  - In the example above, a command using `find` and `grep` is used to list all
+    files referencing currently ones, so they're also sent to target location
+    whenever the file they reference is changed.
+  - Note the regular expression could have been more specific, but the point is
+    to be sure to include all changed files when deploying ; a few false
+    positives will just cause harmless extra synchronizations.
 
 Troubleshooting
 ---------------

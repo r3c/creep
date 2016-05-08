@@ -31,7 +31,7 @@ def build (logger, connection, options):
 		return FTPTarget (host, port, user, password, directory, options)
 
 	if scheme == 'ssh':
-		if host is not None or password is not None or port is not None or user is not None:
+		if password is not None:
 			logger.warn ('Connection string for "ssh" scheme shouldn\'t contain any password.')
 
 		from targets.ssh import SSHTarget
