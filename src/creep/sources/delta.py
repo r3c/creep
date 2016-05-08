@@ -1,14 +1,86 @@
 #!/usr/bin/env python
 
+import hashlib
+import os
+import shutil
+
 from ..action import Action
-from ..process import Process
 
 class DeltaSource:
 	def __init__ (self, directory):
+		self.algorithm = 'md5'
 		self.directory = directory
+		self.follow = False
 
 	def current (self):
-		raise 'Not implemented'
+		return self.scan (self.directory)
 
 	def diff (self, logger, work, rev_from, rev_to):
-		raise 'Not implemented'
+		return self.prepare (work, rev_from or {}, rev_to or {}, '')
+
+	def digest (self, path):
+		hash = hashlib.new (self.algorithm)
+
+		with open (path, 'rb') as file:
+			for chunk in iter (lambda: file.read (4096), b''):
+				hash.update (chunk)
+
+		return hash.hexdigest ()
+
+	def prepare (self, work, entries_from, entries_to, base):
+		actions = []
+
+		for name in set (entries_from.keys () + entries_to.keys ()):
+			entry_from = entries_from.get (name, None)
+			entry_to = entries_to.get (name, None)
+			path = os.path.join (base, name)
+
+			# Define action and recurse depending on "from" and "to" entries
+			if isinstance (entry_from, dict):
+				if isinstance (entry_to, dict):
+					actions.extend (self.prepare (work, entry_from, entry_to, path))
+					action = None
+				else:
+					actions.extend (self.prepare (work, entry_from, {}, path))
+					action = entry_to is not None and Action (path, Action.ADD) or None
+			else:
+				if isinstance (entry_to, dict):
+					actions.extend (self.prepare (work, {}, entry_to, path))
+					action = entry_from is not None and Action (path, Action.DEL) or None
+				elif entry_from <> entry_to:
+					action = Action (path, entry_to is not None and Action.ADD or Action.DEL)
+				else:
+					action = None
+
+			# Append action and copy file to work directory if "ADD" action
+			if action is not None:
+				if action.type == Action.ADD:
+					path = os.path.join (work, action.path)
+
+					if not os.path.isdir (os.path.dirname (path)):
+						os.makedirs (os.path.dirname (path))
+
+					shutil.copy (action.path, path)
+
+				actions.append (action)
+
+		return actions
+
+	def scan (self, base):
+		entries = {}
+
+		for name in os.listdir (base):
+			path = os.path.join (base, name)
+
+			if not self.follow and os.path.islink (path):
+				continue
+			elif os.path.isdir (path):
+				entry = self.scan (path)
+			elif os.path.isfile (path):
+				entry = self.digest (path)
+			else:
+				continue
+
+			entries[name] = entry
+
+		return entries

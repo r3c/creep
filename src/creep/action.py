@@ -1,10 +1,10 @@
 #!/usr/bin/env python
 
 class Action:
-	ADD = 0
-	DEL = 1
-	ERR = 2	
-	NOP = 3
+	ADD = 1
+	DEL = 2
+	ERR = 3
+	NOP = 4
 
 	def __init__ (self, path, type):
 		self.path = path
