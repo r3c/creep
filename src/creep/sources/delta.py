@@ -2,7 +2,6 @@
 
 import hashlib
 import os
-import shutil
 
 from ..action import Action
 
@@ -52,16 +51,9 @@ class DeltaSource:
 				else:
 					action = None
 
-			# Append action and copy file to work directory if "ADD" action
+			# Prepare and append action
 			if action is not None:
-				if action.type == Action.ADD:
-					path = os.path.join (work, action.path)
-
-					if not os.path.isdir (os.path.dirname (path)):
-						os.makedirs (os.path.dirname (path))
-
-					shutil.copy (action.path, path)
-
+				action.prepare (work)
 				actions.append (action)
 
 		return actions

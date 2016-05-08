@@ -78,13 +78,7 @@ def deploy (logger, environment, modifiers, name, files, rev_from, rev_to):
 
 		# Append commands from manually specified files
 		for action in files:
-			if action.type == creep.Action.ADD:
-				path = os.path.join (work, action.path)
-
-				if not os.path.isdir (os.path.dirname (path)):
-					os.makedirs (os.path.dirname (path))
-
-				shutil.copy (action.path, path)
+			action.prepare (work)
 
 		commands.extend (files)
 
