@@ -4,13 +4,16 @@ import os
 import shutil
 
 class FileTarget:
-	def __init__ (self, path):
-		self.path = path
+	def __init__ (self, directory):
+		self.directory = directory
 
 	def read (self, logger, path):
-		path = os.path.join (self.path, path)
+		path = os.path.join (self.directory, path)
 
 		if not os.path.isfile (path):
+			return ''
+
+		if not os.access (path, os.R_OK):
 			return None
 
 		with open (path, 'rb') as file:
@@ -18,7 +21,7 @@ class FileTarget:
 
 	def send (self, logger, work, actions):
 		for action in actions:
-			path = os.path.join (self.path, action.path)
+			path = os.path.join (self.directory, action.path)
 
 			if action.type == action.ADD:
 				directory = os.path.dirname (path)

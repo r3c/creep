@@ -6,7 +6,7 @@ import os
 class EnvironmentConfig:
 	def __init__ (self, config):
 		self.connection = config['connection']
-		self.delta = config.get ('delta', None)
+		self.diff = config.get ('diff', None)
 		self.local = config.get ('local', False)
 		self.options = config.get ('options', {})
 		self.state = config.get ('state', '.creep.revs')

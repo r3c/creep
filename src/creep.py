@@ -23,15 +23,25 @@ def deploy (logger, environment, modifiers, name, files, rev_from, rev_to):
 	elif os.path.exists (environment.state):
 		data = open (environment.state, 'rb').read ()
 	else:
-		data = None
+		data = ''
 
-	revisions = creep.Revisions (data)
+	if data is None:
+		logger.error ('Can\'t read contents from revisions file "{0}"'.format (environment.state))
+
+		return False
+
+	try:
+		revisions = creep.Revisions (data)
+	except Error as e:
+		logger.error ('Can\'t parse revisions from file "{0}": {1}'.format (environment.state, e))
+
+		return False
 
 	# Build source repository reader from current directory
-	source = creep.source.build (environment.delta, os.getcwd ())
+	source = creep.source.build (environment.diff, os.getcwd ())
 
 	if source is None:
-		logger.error ('Can\'t recognize workspace type in folder "{1}" for environment "{0}"'.format (name, os.getcwd ()))
+		logger.error ('Can\'t recognize diff type in folder "{1}" for environment "{0}", try specifying "diff" option'.format (name, os.getcwd ()))
 
 		return False
 
@@ -39,7 +49,7 @@ def deploy (logger, environment, modifiers, name, files, rev_from, rev_to):
 	if rev_from is None:
 		rev_from = revisions.get (name)
 
-		if rev_from is None and not prompt (logger, 'Could not read current revision, maybe you\'re deploying for the first time. Initiate full deploy? [Y/N]'):
+		if rev_from is None and not prompt (logger, 'No current revision found, maybe you\'re deploying for the first time. Initiate full deploy? [Y/N]'):
 			return True
 
 	if rev_to is None:
@@ -53,7 +63,6 @@ def deploy (logger, environment, modifiers, name, files, rev_from, rev_to):
 	revisions.set (name, rev_to)
 
 	# Prepare actions
-	data = rev_from <> rev_to and revisions.serialize () or None
 	work = tempfile.mkdtemp ()
 
 	try:
@@ -93,16 +102,16 @@ def deploy (logger, environment, modifiers, name, files, rev_from, rev_to):
 		for delete in deletes:
 			os.remove (os.path.join (work, delete))
 
-		# Update current revision (remove mode)
-		if data is not None and not environment.local:
+		# Update current revision (remote mode)
+		if rev_from <> rev_to and not environment.local:
 			with open (os.path.join (work, environment.state), 'wb') as file:
-				file.write (data)
+				file.write (revisions.serialize ())
 
 			actions.append (creep.Action (environment.state, creep.Action.ADD))
 
 		# Display processed actions using console target
 		if len (actions) < 1:
-			logger.info ('No synchronization action required')
+			logger.info ('No deployment required')
 
 			return True
 
@@ -121,9 +130,9 @@ def deploy (logger, environment, modifiers, name, files, rev_from, rev_to):
 			return False
 
 		# Update current revision (local mode)
-		if data is not None and environment.local:
+		if environment.local:
 			with open (environment.state, 'wb') as file:
-				file.write (data)
+				file.write (revisions.serialize ())
 
 		logger.info ('Deployment successfully completed')
 
@@ -155,9 +164,9 @@ parser = argparse.ArgumentParser (description = 'Perform full or incremental dep
 parser.add_argument ('names', nargs = '*', help = 'Specify target environment name')
 parser.add_argument ('-a', '--extra-add', action = 'append', default = [], help = 'Extra local file/dir to add', metavar = 'PATH')
 parser.add_argument ('-d', '--extra-del', action = 'append', default = [], help = 'Extra local file/dir to delete', metavar = 'PATH')
-parser.add_argument ('-e', '--envs', action = 'store', default = '.creep.envs', help = 'Environments file path', metavar = 'PATH')
+parser.add_argument ('-e', '--envs', action = 'store', default = '.creep.envs', help = 'Use specified environments file', metavar = 'PATH')
 parser.add_argument ('-f', '--rev-from', action = 'store', help = 'Initial version used to compute diff', metavar = 'REV')
-parser.add_argument ('-m', '--mods', action = 'store', default = '.creep.mods', help = 'Modifiers file path', metavar = 'PATH')
+parser.add_argument ('-m', '--mods', action = 'store', default = '.creep.mods', help = 'Use specified modifiers file', metavar = 'PATH')
 parser.add_argument ('-t', '--rev-to', action = 'store', help = 'Target version used to compute diff', metavar = 'REV')
 parser.add_argument ('-v', '--verbose', action = 'store_true', help = 'Increase verbosity')
 parser.add_argument ('-y', '--yes', action = 'store_true', help = 'Always answer yes to prompts')

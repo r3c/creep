@@ -115,9 +115,9 @@ JSON object:
 Here are the supported protocols, expected connection string and available
 options for each of them:
 
-- Local FS:
-  - Use `file://path` where path is relative to current directory (note the
-    triple `/` in example above to get an absolute path).
+- Local file system:
+  - Use `file:///path` where path is relative to current directory.
+  - Note the use of triple slash `///` because file protocol has no hostname.
 - FTP:
   - Use `ftp://user:pass@host:port/path` where `user` and `pass` are optional
     credentials (anonymous login will be used if they're missing), `port` is an
@@ -126,10 +126,13 @@ options for each of them:
   - Boolean option "passive" enables (default) or disables passive mode.
 - SSH:
   - Use `ssh://user@host:port/path` where variables are similar to the ones used
-    for FTP deployment. Password can't be specified here, so you'll need to
+    for FTP deployment. No password can be specified here, so you'll need to
     either enter password manually or setup SSH keys and start SSH agent.
   - String option "extra" can be used to pass additional parameters to SSH
-    command. 
+    command, as shown in example above.
+
+For all protocols path is relative by default. Start your path by a slash `/`
+character to specify an absolute path, e.g. `file:////var/opt/myproject`. 
 
 Modifiers
 ---------

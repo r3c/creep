@@ -3,7 +3,7 @@
 from ..action import Action
 from ..process import Process
 
-class FileSource:
+class DeltaSource:
 	def __init__ (self, directory):
 		self.directory = directory
 

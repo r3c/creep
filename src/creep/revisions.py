@@ -6,13 +6,9 @@ class Revisions:
 	def __init__ (self, data):
 		revs = {}	
 
-		if data is not None:
-			try:
-				for (name, rev) in json.loads (data).iteritems ():
-					revs[name] = rev
-
-			except IOError:
-				raise ValueError ('invalid revisions file')
+		if data <> '':
+			for (name, rev) in json.loads (data).iteritems ():
+				revs[name] = rev
 
 		self.revs = revs
 

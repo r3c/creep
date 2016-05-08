@@ -10,15 +10,17 @@ from ..action import Action
 from ..process import Process
 
 class SSHTarget:
-	def __init__ (self, host, port, user, path, options):
+	def __init__ (self, host, port, user, directory, options):
 		extra = shlex.split (options.get ('extra', ''))
 		remote = str ((user or os.getusername ()) + '@' + (host or 'localhost'))
 
-		self.ssh_command = ['ssh', '-T', '-p', str (port or 22)] + extra + [remote]
-		self.ssh_path = path
+		self.directory = directory
+		self.tunnel = ['ssh', '-T', '-p', str (port or 22)] + extra + [remote]
 
 	def read (self, logger, path):
-		return Process (self.ssh_command + ['cat \'' + pipes.quote (self.ssh_path + '/' + path) + '\' 2> /dev/null']).execute ()
+		command = '! test -f \'{0}\' || cat \'{0}\''.format (pipes.quote (self.directory + '/' + path))
+
+		return Process (self.tunnel + [command]).execute ()
 
 	def send (self, logger, work, actions):
 		with tempfile.TemporaryFile () as archive:
@@ -33,18 +35,18 @@ class SSHTarget:
 
 						to_add = True
 					elif action.type == Action.DEL:
-						to_del.append (self.ssh_path + '/' + action.path)
+						to_del.append (self.directory + '/' + action.path)
 
 			archive.seek (0)
 
 			# Send and delete files on remote host
-			if to_add and Process (self.ssh_command + ['tar xC \'' + pipes.quote (self.ssh_path) + '\'']).set_stdin (archive.read ()).execute () is None:
-				logger.warning ('couldn\'t push files to SSH target')
+			if to_add and Process (self.tunnel + ['tar xC \'' + pipes.quote (self.directory) + '\'']).set_stdin (archive.read ()).execute () is None:
+				logger.warning ('Couldn\'t push files to SSH target')
 
 				return False
 
-			if len (to_del) > 0 and Process (self.ssh_command + ['sh']).set_stdin (';'.join (['rm -f \'' + pipes.quote (path) + '\'' for path in to_del])).execute () is None:
-				logger.warning ('couldn\'t delete files from SSH target')
+			if len (to_del) > 0 and Process (self.tunnel + ['sh']).set_stdin (';'.join (['rm -f \'' + pipes.quote (path) + '\'' for path in to_del])).execute () is None:
+				logger.warning ('Couldn\'t delete files from SSH target')
 
 				return False
 
