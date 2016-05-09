@@ -113,25 +113,32 @@ Here an example of environments configuration file showing most features:
 
 - The `locations` part specifies available deployment locations. Each one must
   contain at least a `connection` string with protocol and optional address,
-  credentials and/or path.
-  - Creep can currently deploy through local file system, FTP or SSH ; read
-    details below for more information about supported protocols.
+  credentials and/or path. Read details below for more information about
+  supported protocols.
 - The `source` part specifies how Creep should analyze differences when you
   execute it inside this directory. When this option is not specified Creep will
-  auto-detect it based on current environment. Supported options are:
-  - `git`: use local `git` executable to be invoked to get diff between two
-    revisions. When using this mode, Creep relies on Git history and only needs
-    to remember the hash of any deployed revision. It also allows you to
+  auto-detect it based on current environment.
+- The `options` part specifies custom parameters depending on the type of source
+  you selected.
+
+Here is the list of supported sources and available options for each of them:
+
+- Git:
+  - Specify `git` source so local `git` executable is used to get diff between
+    two revisions. When using this mode Creep relies on Git history and only
+    needs to remember which revision has been deployed. It also allows you to
     manually specify the revision you want to deploy through command line
     argument.
-  - `hash`: computes a hash of each file to detect differences. This mode has a
-    higher overhead than Git, but can work with any regular folder.
-- The `options` part specifies custom parameters depending on the type of source
-  you selected. Supported options are:
-  - When using `hash` mode: `algorithm` selects the hashing algorithm to be used
-    among sha1, sha256, sha512 or md5 (default), `follow` specifies whether
-    symbolic links should be followed or ignored (default).
-  - When using `git` mode: no options are available.
+  - No options are available for this source type.
+- Hash:
+  - Specify `hash` source to have Creep computing a hash of each file to detect
+    differences. This mode has a higher overhead than Git since it has to save
+    a value for each file rather than one unique revision, but can work with any
+    regular folder.
+  - String option `algorithm` selects the hashing algorithm to be used among
+    sha1, sha256, sha512 or md5 (default).
+  - Boolean option `follow` specifies whether symbolic links should be
+    followed or ignored (default).
 
 Once environments configuration file is ready you can start using Creep. Just
 type `creep <env>` where `<env>` is name of a configured location. When no name
@@ -151,10 +158,10 @@ you may prefer to store them locally instead. In that case just add a new
 
     {
         ...
-        "integration": {
-            "connection": "ftp://me:password@my-dev-server/www-data/",
-            "local": true
-        },
+            "integration": {
+                "connection": "ftp://me:password@my-dev-server/www-data/",
+                "local": true
+            },
         ...
     }
 
@@ -163,31 +170,35 @@ specify options just add an "options" property containing required options as a
 JSON object:
 
     {
-        "default": {
-            "connection": "ssh://www-data@localhost/www.mywebsite.com/",
-            "options": {
-                "extra": "-o StrictHostKeyChecking=no"
-            }
-        }
+        ...
+            "default": {
+                "connection": "ssh://www-data@localhost/www.mywebsite.com/",
+                "options": {
+                    "extra": "-o StrictHostKeyChecking=no"
+                }
+            },
+        ...
     }
 
-Here are the supported protocols, expected connection string and available
-options for each of them:
+Here is the list of supported protocols, expected connection string format and
+available options for each of them:
 
 - Local file system:
-  - Use `file:///path` where path is relative to current directory.
+  - Use connection format `file:///path` where path is relative to current
+    directory.
   - Note the use of triple slash `///` because file protocol has no hostname.
 - FTP:
-  - Use `ftp://user:pass@host:port/path` where `user` and `pass` are optional
-    credentials (anonymous login will be used if they're missing), `port` is an
-    optional FTP port which defaults to 21, and `path` is a path relative to FTP
-    user home directory.
-  - Boolean option "passive" enables (default) or disables passive mode.
+  - Use connection format `ftp://user:pass@host:port/path` where `user` and
+    `pass` are optional credentials (anonymous login will be used if they're
+    missing), `port` is an optional FTP port which defaults to 21, and `path` is
+    a path relative to FTP user home directory.
+  - Boolean option `passive` enables (default) or disables passive mode.
 - SSH:
-  - Use `ssh://user@host:port/path` where variables are similar to the ones used
-    for FTP deployment. No password can be specified here, so you'll need to
-    either enter password manually or setup SSH keys and start SSH agent.
-  - String option "extra" can be used to pass additional parameters to SSH
+  - Use connection format `ssh://user@host:port/path` where variables are
+    similar to the ones used for FTP deployment. No password can be specified
+    here, so you'll need to either enter password manually or setup SSH keys and
+    start SSH agent.
+  - String option `extra` can be used to pass additional parameters to SSH
     command, as shown in example above.
 
 For all protocols path is relative by default. Start your path by a slash `/`
