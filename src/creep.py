@@ -9,11 +9,11 @@ import sys
 import tempfile
 
 def deploy (logger, environments, modifiers, name, files, rev_from, rev_to):
-	# Retrieve target location
+	# Retrieve remove location by name
 	location = environments.get_location (name)
 
 	if location is None:
-		logger.error ('There is no location \'{0}\' in your environments file.'.format (name))
+		logger.error ('There is no location "{0}" in your environments file.'.format (name))
 
 		return False
 
@@ -46,10 +46,10 @@ def deploy (logger, environments, modifiers, name, files, rev_from, rev_to):
 		return False
 
 	# Build source repository reader from current directory
-	source = creep.source.build (location.diff, os.getcwd ())
+	source = creep.source.build (environments.source, environments.options, os.getcwd ())
 
 	if source is None:
-		logger.error ('Unknown diff type in folder "{1}" for location "{0}", try specifying "diff" option.'.format (name, os.getcwd ()))
+		logger.error ('Unknown source type in folder "{1}" for location "{0}", try specifying "source" option in environments file.'.format (name, os.getcwd ()))
 
 		return False
 
@@ -190,7 +190,7 @@ for path in args.extra_add:
 	elif os.path.isfile (path):
 		files.append (creep.Action (path, creep.Action.ADD))
 	else:
-		logger.error ('Can\'t add missing file \'{0}\'.'.format (path))
+		logger.error ('Can\'t add missing file "{0}".'.format (path))
 
 for path in args.extra_del:
 	if os.path.isdir (path):
@@ -200,8 +200,8 @@ for path in args.extra_del:
 		files.append (creep.Action (path, creep.Action.DEL))
 
 # Perform deployment
-environments = creep.Environments (args.envs)
-modifiers = creep.Modifiers (args.mods)
+environments = creep.Environments (logger, args.envs)
+modifiers = creep.Modifiers (args.mods, args.envs)
 yes = args.yes
 
 if len (args.names) < 1:

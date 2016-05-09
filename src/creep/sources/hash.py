@@ -5,11 +5,11 @@ import os
 
 from ..action import Action
 
-class DeltaSource:
-	def __init__ (self, directory):
-		self.algorithm = 'md5'
+class HashSource:
+	def __init__ (self, directory, options):
+		self.algorithm = options.get ('algorithm', 'md5')
 		self.directory = directory
-		self.follow = False
+		self.follow = options.get ('follow', False)
 
 	def current (self):
 		return self.scan (self.directory)

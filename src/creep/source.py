@@ -4,20 +4,20 @@ import os
 
 from path import explode
 
-def build (diff, directory):
-	diff = diff or detect (directory)
+def build (source, options, directory):
+	source = source or detect (directory)
 
-	if diff == 'delta':
-		from sources.delta import DeltaSource
+	if source == 'delta' or source == 'hash':
+		from sources.hash import HashSource
 
-		return DeltaSource (directory)
+		return HashSource (directory, options)
 
-	if diff == 'git':
+	if source == 'git':
 		from sources.git import GitSource
 
 		return GitSource (directory)
 
-	# No known diff type recognized
+	# No known source type recognized
 	return None
 
 def detect (directory):
@@ -27,5 +27,5 @@ def detect (directory):
 	if any ((os.path.exists (os.path.join (*(names[0:n] + ['.git']))) for n in range (len (names), 0, -1))):
 		return 'git'
 
-	# Fallback to delta diff by default
-	return 'delta'
+	# Fallback to hash source by default
+	return 'hash'

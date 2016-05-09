@@ -8,18 +8,19 @@ from action import Action
 from process import Process
 
 class ModifierRule:
-	def __init__ (self, regex, rename, filter, modify, link):
-		self.modify = modify
+	def __init__ (self, regex, filter, rename, modify, link):
 		self.filter = filter
 		self.link = link
-		self.rename = rename
+		self.modify = modify
 		self.regex = regex
+		self.rename = rename
 
 class Modifiers:
-	def __init__ (self, path):
-		rules = []
-
+	def __init__ (self, path, environments):
+		# Read rules from configuration file if available...
 		if os.path.isfile (path):
+			rules = []
+
 			with open (path, 'rb') as stream:
 				for rule in json.load (stream):
 					modify = rule.get ('modify', rule.get ('adapt', None))
@@ -27,7 +28,11 @@ class Modifiers:
 					link = rule.get ('link', None)
 					rename = rule.get ('rename', rule.get ('name', None))
 
-					rules.append (ModifierRule (re.compile (rule['pattern']), rename, filter, modify, link))
+					rules.append (ModifierRule (re.compile (rule['pattern']), filter, rename, modify, link))
+
+		# ...or provide default set of rules otherwise
+		else:
+			rules = [ModifierRule (re.compile (re.escape (environments)), 'false', None, None, None)]
 
 		self.rules = rules
 
