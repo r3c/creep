@@ -13,18 +13,18 @@ class EnvironmentConfig:
 
 class Environments:
 	def __init__ (self, path):
-		envs = {}
+		locations = {}
 
 		if os.path.isfile (path):
 			try:
 				with open (path, 'rb') as stream:
 					for (name, env) in json.load (stream).iteritems ():
-						envs[name] = EnvironmentConfig (env)
+						locations[name] = EnvironmentConfig (env)
 
 			except KeyError, key:
 				raise ValueError ('missing property "{0}" in environments file "{1}"'.format (key, path))
 
-		self.envs = envs
+		self.locations = locations
 
-	def get (self, name):
-		return self.envs.get (name, None)
+	def get_location (self, name):
+		return self.locations.get (name, None)

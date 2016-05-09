@@ -8,40 +8,48 @@ import shutil
 import sys
 import tempfile
 
-def deploy (logger, environment, modifiers, name, files, rev_from, rev_to):
-	# Build target from environment connection string
-	target = creep.target.build (logger, environment.connection, environment.options)
+def deploy (logger, environments, modifiers, name, files, rev_from, rev_to):
+	# Retrieve target location
+	location = environments.get_location (name)
+
+	if location is None:
+		logger.error ('There is no location \'{0}\' in your environments file.'.format (name))
+
+		return False
+
+	# Build target from location connection string
+	target = creep.target.build (logger, location.connection, location.options)
 
 	if target is None:
-		logger.error ('Unsupported scheme in connection string "{1}" for environment "{0}".'.format (name, environment.connection))
+		logger.error ('Unsupported scheme in connection string "{1}" for location "{0}".'.format (name, location.connection))
 
 		return False
 
 	# Read revisions file
-	if not environment.local:
-		data = target.read (logger, environment.state)
-	elif os.path.exists (environment.state):
-		data = open (environment.state, 'rb').read ()
+	if not location.local:
+		data = target.read (logger, location.state)
+	elif os.path.exists (location.state):
+		data = open (location.state, 'rb').read ()
 	else:
 		data = ''
 
 	if data is None:
-		logger.error ('Can\'t read contents from revisions file "{0}".'.format (environment.state))
+		logger.error ('Can\'t read contents from revisions file "{1}" for location "{0}".'.format (name, location.state))
 
 		return False
 
 	try:
 		revisions = creep.Revisions (data)
 	except Error as e:
-		logger.error ('Can\'t parse revisions from file "{0}": {1}.'.format (environment.state, e))
+		logger.error ('Can\'t parse revisions from file "{1}" for location "{0}": {2}.'.format (name, location.state, e))
 
 		return False
 
 	# Build source repository reader from current directory
-	source = creep.source.build (environment.diff, os.getcwd ())
+	source = creep.source.build (location.diff, os.getcwd ())
 
 	if source is None:
-		logger.error ('Unknown diff type in folder "{1}" for environment "{0}", try specifying "diff" option.'.format (name, os.getcwd ()))
+		logger.error ('Unknown diff type in folder "{1}" for location "{0}", try specifying "diff" option.'.format (name, os.getcwd ()))
 
 		return False
 
@@ -49,14 +57,14 @@ def deploy (logger, environment, modifiers, name, files, rev_from, rev_to):
 	if rev_from is None:
 		rev_from = revisions.get (name)
 
-		if rev_from is None and not prompt (logger, 'No current revision found, maybe you\'re deploying for the first time. Initiate full deploy? [Y/N]'):
+		if rev_from is None and not prompt (logger, 'No current revision found for location "{0}", maybe you\'re deploying for the first time. Initiate full deploy? [Y/N]'.format (name)):
 			return True
 
 	if rev_to is None:
 		rev_to = source.current ()
 
 		if rev_to is None:
-			logger.error ('Can\'t find source version, please ensure your environment file is correctly defined.')
+			logger.error ('Can\'t find source version for location "{0}", please ensure your environments file is correctly defined.'.format (name))
 
 			return False
 
@@ -97,15 +105,15 @@ def deploy (logger, environment, modifiers, name, files, rev_from, rev_to):
 			os.remove (os.path.join (work, delete))
 
 		# Update current revision (remote mode)
-		if rev_from != rev_to and not environment.local:
-			with open (os.path.join (work, environment.state), 'wb') as file:
+		if rev_from != rev_to and not location.local:
+			with open (os.path.join (work, location.state), 'wb') as file:
 				file.write (revisions.serialize ())
 
-			actions.append (creep.Action (environment.state, creep.Action.ADD))
+			actions.append (creep.Action (location.state, creep.Action.ADD))
 
 		# Display processed actions using console target
 		if len (actions) < 1:
-			logger.info ('No deployment required.')
+			logger.info ('No deployment required for location "{0}".'.format (name))
 
 			return True
 
@@ -124,11 +132,11 @@ def deploy (logger, environment, modifiers, name, files, rev_from, rev_to):
 			return False
 
 		# Update current revision (local mode)
-		if environment.local:
-			with open (environment.state, 'wb') as file:
+		if location.local:
+			with open (location.state, 'wb') as file:
 				file.write (revisions.serialize ())
 
-		logger.info ('Deployment successfully completed.')
+		logger.info ('Deployment to location "{0}" done.'.format (name))
 
 		return True
 
@@ -155,21 +163,22 @@ def prompt (logger, question):
 
 # Parse command line options
 parser = argparse.ArgumentParser (description = 'Perform full or incremental deployment, from Git/plain workspace to FTP/SSH/local folder.')
-parser.add_argument ('names', nargs = '*', help = 'Specify target environment name')
+parser.add_argument ('names', nargs = '*', help = 'Specify target location name')
 parser.add_argument ('-a', '--extra-add', action = 'append', default = [], help = 'Extra local file/dir to add', metavar = 'PATH')
 parser.add_argument ('-d', '--extra-del', action = 'append', default = [], help = 'Extra local file/dir to delete', metavar = 'PATH')
 parser.add_argument ('-e', '--envs', action = 'store', default = '.creep.envs', help = 'Use specified environments file', metavar = 'PATH')
 parser.add_argument ('-f', '--rev-from', action = 'store', help = 'Initial version used to compute diff', metavar = 'REV')
 parser.add_argument ('-m', '--mods', action = 'store', default = '.creep.mods', help = 'Use specified modifiers file', metavar = 'PATH')
+parser.add_argument ('-q', '--quiet', dest = 'level', action = 'store_const', const = logging.CRITICAL + 1, default = logging.INFO, help = 'Disable logging')
 parser.add_argument ('-t', '--rev-to', action = 'store', help = 'Target version used to compute diff', metavar = 'REV')
-parser.add_argument ('-v', '--verbose', action = 'store_true', help = 'Increase verbosity')
+parser.add_argument ('-v', '--verbose', dest = 'level', action = 'store_const', const = logging.DEBUG, default = logging.INFO, help = 'Increase verbosity')
 parser.add_argument ('-y', '--yes', action = 'store_true', help = 'Always answer yes to prompts')
 
 args = parser.parse_args ()
 
 # Initialize logger
 logger = creep.Logger.build ()
-logger.setLevel (args.verbose and logging.DEBUG or logging.INFO)
+logger.setLevel (args.level)
 
 # Build extra files list
 files = []
@@ -201,16 +210,7 @@ if len (args.names) < 1:
 code = 0
 
 for name in args.names:
-	# Retrieve environment configuration
-	environment = environments.get (name)
-
-	if environment is None:
-		logger.error ('There is no environment \'{0}\' in your environments file.'.format (name))
-
-		code = 1
-	elif not deploy (logger, environment, modifiers, name, files, args.rev_from, args.rev_to):
-		logger.error ('Deployment to environment \'{0}\' failed.'.format (name))
-
+	if not deploy (logger, environments, modifiers, name, files, args.rev_from, args.rev_to):
 		code = 1
 
 sys.exit (code)
