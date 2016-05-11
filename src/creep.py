@@ -143,6 +143,61 @@ def deploy (logger, environments, modifiers, name, files, rev_from, rev_to):
 	finally:
 		shutil.rmtree (work)
 
+def main ():
+	# Parse command line options
+	parser = argparse.ArgumentParser (description = 'Perform full or incremental deployment, from Git/plain workspace to FTP/SSH/local folder.')
+	parser.add_argument ('names', nargs = '*', help = 'Specify target location name')
+	parser.add_argument ('-a', '--extra-add', action = 'append', default = [], help = 'Extra local file/dir to add', metavar = 'PATH')
+	parser.add_argument ('-d', '--extra-del', action = 'append', default = [], help = 'Extra local file/dir to delete', metavar = 'PATH')
+	parser.add_argument ('-e', '--envs', action = 'store', default = '.creep.envs', help = 'Use specified environments file', metavar = 'PATH')
+	parser.add_argument ('-f', '--rev-from', action = 'store', help = 'Initial version used to compute diff', metavar = 'REV')
+	parser.add_argument ('-m', '--mods', action = 'store', default = '.creep.mods', help = 'Use specified modifiers file', metavar = 'PATH')
+	parser.add_argument ('-q', '--quiet', dest = 'level', action = 'store_const', const = logging.CRITICAL + 1, default = logging.INFO, help = 'Disable logging')
+	parser.add_argument ('-t', '--rev-to', action = 'store', help = 'Target version used to compute diff', metavar = 'REV')
+	parser.add_argument ('-v', '--verbose', dest = 'level', action = 'store_const', const = logging.DEBUG, default = logging.INFO, help = 'Increase verbosity')
+	parser.add_argument ('-y', '--yes', action = 'store_true', help = 'Always answer yes to prompts')
+
+	args = parser.parse_args ()
+
+	# Initialize logger
+	logger = creep.Logger.build ()
+	logger.setLevel (args.level)
+
+	# Build extra files list
+	files = []
+
+	for path in args.extra_add:
+		if os.path.isdir (path):
+			for (dirpath, dirnames, filenames) in os.walk (path):
+				files.extend ((creep.Action (os.path.join (dirpath, filename), creep.Action.ADD) for filename in filenames))
+		elif os.path.isfile (path):
+			files.append (creep.Action (path, creep.Action.ADD))
+		else:
+			logger.error ('Can\'t add missing file "{0}".'.format (path))
+
+	for path in args.extra_del:
+		if os.path.isdir (path):
+			for (dirpath, dirnames, filenames) in os.walk (path):
+				files.extend ((creep.Action (os.path.join (dirpath, filename), creep.Action.DEL) for filename in filenames))
+		else:
+			files.append (creep.Action (path, creep.Action.DEL))
+
+	# Perform deployment
+	environments = creep.Environments (logger, args.envs)
+	modifiers = creep.Modifiers (args.mods, args.envs)
+	yes = args.yes
+
+	if len (args.names) < 1:
+		args.names.append ('default')
+
+	code = 0
+
+	for name in args.names:
+		if not deploy (logger, environments, modifiers, name, files, args.rev_from, args.rev_to):
+			code = 1
+
+	return code
+
 def prompt (logger, question):
 	global yes
 
@@ -161,56 +216,5 @@ def prompt (logger, question):
 
 		logger.warning ('Invalid answer')
 
-# Parse command line options
-parser = argparse.ArgumentParser (description = 'Perform full or incremental deployment, from Git/plain workspace to FTP/SSH/local folder.')
-parser.add_argument ('names', nargs = '*', help = 'Specify target location name')
-parser.add_argument ('-a', '--extra-add', action = 'append', default = [], help = 'Extra local file/dir to add', metavar = 'PATH')
-parser.add_argument ('-d', '--extra-del', action = 'append', default = [], help = 'Extra local file/dir to delete', metavar = 'PATH')
-parser.add_argument ('-e', '--envs', action = 'store', default = '.creep.envs', help = 'Use specified environments file', metavar = 'PATH')
-parser.add_argument ('-f', '--rev-from', action = 'store', help = 'Initial version used to compute diff', metavar = 'REV')
-parser.add_argument ('-m', '--mods', action = 'store', default = '.creep.mods', help = 'Use specified modifiers file', metavar = 'PATH')
-parser.add_argument ('-q', '--quiet', dest = 'level', action = 'store_const', const = logging.CRITICAL + 1, default = logging.INFO, help = 'Disable logging')
-parser.add_argument ('-t', '--rev-to', action = 'store', help = 'Target version used to compute diff', metavar = 'REV')
-parser.add_argument ('-v', '--verbose', dest = 'level', action = 'store_const', const = logging.DEBUG, default = logging.INFO, help = 'Increase verbosity')
-parser.add_argument ('-y', '--yes', action = 'store_true', help = 'Always answer yes to prompts')
-
-args = parser.parse_args ()
-
-# Initialize logger
-logger = creep.Logger.build ()
-logger.setLevel (args.level)
-
-# Build extra files list
-files = []
-
-for path in args.extra_add:
-	if os.path.isdir (path):
-		for (dirpath, dirnames, filenames) in os.walk (path):
-			files.extend ((creep.Action (os.path.join (dirpath, filename), creep.Action.ADD) for filename in filenames))
-	elif os.path.isfile (path):
-		files.append (creep.Action (path, creep.Action.ADD))
-	else:
-		logger.error ('Can\'t add missing file "{0}".'.format (path))
-
-for path in args.extra_del:
-	if os.path.isdir (path):
-		for (dirpath, dirnames, filenames) in os.walk (path):
-			files.extend ((creep.Action (os.path.join (dirpath, filename), creep.Action.DEL) for filename in filenames))
-	else:
-		files.append (creep.Action (path, creep.Action.DEL))
-
-# Perform deployment
-environments = creep.Environments (logger, args.envs)
-modifiers = creep.Modifiers (args.mods, args.envs)
-yes = args.yes
-
-if len (args.names) < 1:
-	args.names.append ('default')
-
-code = 0
-
-for name in args.names:
-	if not deploy (logger, environments, modifiers, name, files, args.rev_from, args.rev_to):
-		code = 1
-
-sys.exit (code)
+if __name__ == '__main__':
+	sys.exit (main ())
