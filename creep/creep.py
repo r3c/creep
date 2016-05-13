@@ -1,10 +1,10 @@
 #!/usr/bin/env python
 
 import argparse
-import creep
 import logging
 import os
 import shutil
+import src
 import sys
 import tempfile
 
@@ -18,7 +18,7 @@ def deploy (logger, environments, modifiers, name, files, rev_from, rev_to):
 		return False
 
 	# Build target from location connection string
-	target = creep.target.build (logger, location.connection, location.options)
+	target = src.target.build (logger, location.connection, location.options)
 
 	if target is None:
 		logger.error ('Unsupported scheme in connection string "{1}" for location "{0}".'.format (name, location.connection))
@@ -39,14 +39,14 @@ def deploy (logger, environments, modifiers, name, files, rev_from, rev_to):
 		return False
 
 	try:
-		revisions = creep.Revisions (data)
+		revisions = src.Revisions (data)
 	except Error as e:
 		logger.error ('Can\'t parse revisions from file "{1}" for location "{0}": {2}.'.format (name, location.state, e))
 
 		return False
 
 	# Build source repository reader from current directory
-	source = creep.source.build (environments.source, environments.options, os.getcwd ())
+	source = src.source.build (environments.source, environments.options, os.getcwd ())
 
 	if source is None:
 		logger.error ('Unknown source type in folder "{1}" for location "{0}", try specifying "source" option in environments file.'.format (name, os.getcwd ()))
@@ -109,7 +109,7 @@ def deploy (logger, environments, modifiers, name, files, rev_from, rev_to):
 			with open (os.path.join (work, location.state), 'wb') as file:
 				file.write (revisions.serialize ())
 
-			actions.append (creep.Action (location.state, creep.Action.ADD))
+			actions.append (src.Action (location.state, src.Action.ADD))
 
 		# Display processed actions using console target
 		if len (actions) < 1:
@@ -117,7 +117,7 @@ def deploy (logger, environments, modifiers, name, files, rev_from, rev_to):
 
 			return True
 
-		from creep.targets.console import ConsoleTarget
+		from src.targets.console import ConsoleTarget
 
 		console = ConsoleTarget ()
 		console.send (logger, work, actions)
@@ -126,7 +126,7 @@ def deploy (logger, environments, modifiers, name, files, rev_from, rev_to):
 			return True
 
 		# Execute processed actions starting with "DEL" ones
-		actions.sort (key = lambda action: (action.type != creep.Action.DEL and 1 or 0, action.path))
+		actions.sort (key = lambda action: (action.type != src.Action.DEL and 1 or 0, action.path))
 
 		if not target.send (logger, work, actions):
 			return False
@@ -162,7 +162,7 @@ def main ():
 	args = parser.parse_args ()
 
 	# Initialize logger
-	logger = creep.Logger.build ()
+	logger = src.Logger.build ()
 	logger.setLevel (args.level)
 
 	# Build extra files list
@@ -171,22 +171,22 @@ def main ():
 	for path in args.extra_add:
 		if os.path.isdir (path):
 			for (dirpath, dirnames, filenames) in os.walk (path):
-				files.extend ((creep.Action (os.path.join (dirpath, filename), creep.Action.ADD) for filename in filenames))
+				files.extend ((src.Action (os.path.join (dirpath, filename), src.Action.ADD) for filename in filenames))
 		elif os.path.isfile (path):
-			files.append (creep.Action (path, creep.Action.ADD))
+			files.append (src.Action (path, src.Action.ADD))
 		else:
 			logger.error ('Can\'t add missing file "{0}".'.format (path))
 
 	for path in args.extra_del:
 		if os.path.isdir (path):
 			for (dirpath, dirnames, filenames) in os.walk (path):
-				files.extend ((creep.Action (os.path.join (dirpath, filename), creep.Action.DEL) for filename in filenames))
+				files.extend ((src.Action (os.path.join (dirpath, filename), src.Action.DEL) for filename in filenames))
 		else:
-			files.append (creep.Action (path, creep.Action.DEL))
+			files.append (src.Action (path, src.Action.DEL))
 
 	# Perform deployment
-	environments = creep.Environments (logger, args.envs)
-	modifiers = creep.Modifiers (args.mods, args.envs)
+	environments = src.Environments (logger, args.envs)
+	modifiers = src.Modifiers (args.mods, args.envs)
 	yes = args.yes
 
 	if len (args.names) < 1:

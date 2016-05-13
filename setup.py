@@ -4,14 +4,14 @@ from codecs import open
 from os import path
 from setuptools import find_packages, setup
 
-import src
+import creep
 
 with open (path.join (path.abspath (path.dirname (__file__)), 'README.md'), encoding = 'utf-8') as file:
 	long_description = file.read ()
 
 setup(
 	name = 'creep',
-	version = src.__version__,
+	version = creep.__version__,
 	description = 'Incremental FTP/SSH deployment tool',
 	long_description = long_description,
 	url = 'https://github.com/r3c/creep',
@@ -31,17 +31,13 @@ setup(
 		'Topic :: System :: Software Distribution'
 	],
 	install_requires = ['setuptools>=1.0'],
-	package_dir = {
-		'':	'src'
-	},
 	packages = [
-		'',
 		'creep',
-		'creep.sources',
-		'creep.targets'
+		'creep.src',
+		'creep.src.sources',
+		'creep.src.targets'
 	],
-	include_package_data = True,
 	entry_points = {
-		'console_scripts':	['creep = creep:main']
+		'console_scripts':	['creep = creep.creep:main']
 	}
 )
