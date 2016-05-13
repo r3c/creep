@@ -18,17 +18,23 @@ revision hashes when deploying from a Git repository.
 Installing
 ----------
 
-To install Creep, checkout repository somewhere and create a symbolic link in
-your `$PATH` to main executable file `creep.py` (located in `src` directory).
-While this is not mandatory (you can prefer to call Creep using full path to
-`creep.py`) it's surely more convenient.
+You can install Creep using either pip or manual install from sources. If you
+choose to use pip, just type the following:
+
+    $ sudo pip install creep
+    $ creep -h # display help to ensure install worked properly
+
+If you prefer install Creep manually, checkout the Git repository somewhere and
+create a symbolic link in your `$PATH` to main executable file `creep.py`
+(located in `src` directory). While this is not mandatory (you can prefer to
+call Creep using full path to `creep.py`) it's surely more convenient:
 
     $ git clone https://github.com/r3c/creep.git
     $ cd creep
     $ sudo ln -s src/creep.py /usr/bin/creep
     $ creep -h # display help
 
-Once Creep is installed go to your project folder and follow next section to
+Once Creep is installed, go to your project folder and follow next section to
 quickly create a basic configuration and deploy your first project.
 
 Quick start

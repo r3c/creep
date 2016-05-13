@@ -16,7 +16,9 @@ setup(
 	long_description = long_description,
 	url = 'https://github.com/r3c/creep',
 	author = 'Remi Caput',
+	author_email = 'python.org+creep@mirari.fr',
 	license = 'MIT',
+	keywords = 'deploy deployment incremetal ftp ssh git',
 	classifiers = [
 		'Development Status :: 4 - Beta',
 		'Environment :: Console',
@@ -28,10 +30,18 @@ setup(
 		'Topic :: System :: Archiving :: Mirroring',
 		'Topic :: System :: Software Distribution'
 	],
-	keywords = 'deploy deployment incremetal ftp ssh git',
-	packages = ['src'],
-	entry_points = {
-		'console_scripts':	['creep = src.creep:main']
+	install_requires = ['setuptools>=1.0'],
+	package_dir = {
+		'':	'src'
 	},
-	install_requires = ['setuptools>=1.0']
+	packages = [
+		'',
+		'creep',
+		'creep.sources',
+		'creep.targets'
+	],
+	include_package_data = True,
+	entry_points = {
+		'console_scripts':	['creep = creep:main']
+	}
 )

@@ -144,6 +144,8 @@ def deploy (logger, environments, modifiers, name, files, rev_from, rev_to):
 		shutil.rmtree (work)
 
 def main ():
+	global yes
+
 	# Parse command line options
 	parser = argparse.ArgumentParser (description = 'Perform full or incremental deployment, from Git/plain workspace to FTP/SSH/local folder.')
 	parser.add_argument ('names', nargs = '*', help = 'Specify target location name')
