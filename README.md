@@ -21,7 +21,7 @@ Installing
 You can install Creep using either pip or manual install from sources. If you
 choose to use pip, just type the following:
 
-    $ sudo pip install creep
+    $ pip install creep
     $ creep -h # display help to ensure install worked properly
 
 If you prefer install Creep manually, checkout the Git repository somewhere and
