@@ -57,9 +57,9 @@ def main ():
 	# Load definition file or use default
 	if os.path.isfile (args.definition):
 		with open (args.definition, 'rb') as file:
-			definition = src.Definition (file, args.environment)
+			definition = src.Definition (file, [args.environment, args.definition])
 	else:
-		definition = src.Definition (None, args.environment)
+		definition = src.Definition (None, [args.environment, args.definition])
 
 	# Perform deployment
 	if len (args.name) < 1:

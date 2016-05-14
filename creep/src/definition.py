@@ -16,7 +16,7 @@ class DefinitionModifier:
 		self.rename = rename
 
 class Definition:
-	def __init__ (self, file, environment):
+	def __init__ (self, file, ignores):
 		modifiers = []
 
 		# Read modifiers from configuration file if available...
@@ -39,7 +39,8 @@ class Definition:
 			options = {}
 			source = None
 
-		modifiers.append (DefinitionModifier (re.compile (re.escape (environment)), '', None, None, None))
+		for ignore in ignores:
+			modifiers.append (DefinitionModifier (re.compile ('^' + re.escape (ignore) + '$'), '', None, None, None))
 
 		self.modifiers = modifiers
 		self.options = options
