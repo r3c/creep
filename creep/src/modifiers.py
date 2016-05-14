@@ -16,19 +16,18 @@ class ModifierRule:
 		self.rename = rename
 
 class Modifiers:
-	def __init__ (self, path, environments):
+	def __init__ (self, file, environments):
 		# Read rules from configuration file if available...
-		if os.path.isfile (path):
+		if file is not None:
 			rules = []
 
-			with open (path, 'rb') as stream:
-				for rule in json.load (stream):
-					modify = rule.get ('modify', rule.get ('adapt', None))
-					filter = rule.get ('filter', None)
-					link = rule.get ('link', None)
-					rename = rule.get ('rename', rule.get ('name', None))
+			for rule in json.load (file):
+				modify = rule.get ('modify', rule.get ('adapt', None))
+				filter = rule.get ('filter', None)
+				link = rule.get ('link', None)
+				rename = rule.get ('rename', rule.get ('name', None))
 
-					rules.append (ModifierRule (re.compile (rule['pattern']), filter, rename, modify, link))
+				rules.append (ModifierRule (re.compile (rule['pattern']), filter, rename, modify, link))
 
 		# ...or provide default set of rules otherwise
 		else:

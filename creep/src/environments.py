@@ -11,19 +11,13 @@ class EnvironmentLocation:
 		self.state = location.get ('state', '.creep.revs')
 
 class Environments:
-	def __init__ (self, logger, path):
-		# Load environments configuration from file if available...
-		if os.path.isfile (path):
-			try:
-				with open (path, 'rb') as stream:
-					config = json.load (stream)
+	def __init__ (self, logger, file):
+		# Load environments configuration from file
+		try:
+			config = json.load (file)
 
-			except KeyError, key:
-				raise ValueError ('missing property "{0}" in environments file "{1}"'.format (key, path))
-
-		# ...or use empty configuration otherwise
-		else:
-			config = {}
+		except KeyError, key:
+			raise ValueError ('missing property "{0}" in environments file'.format (key))
 
 		# Compatibility mode: update to new format if no "locations" key found
 		if len (config) > 0 and not 'locations' in config and not 'options' in config and not 'source' in config:

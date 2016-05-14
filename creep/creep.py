@@ -8,8 +8,8 @@ import src
 import sys
 import tempfile
 
-def deploy (logger, environments, modifiers, name, files, rev_from, rev_to):
-	# Retrieve remove location by name
+def deploy (logger, environments, modifiers, name, files, rev_from, rev_to, yes):
+	# Retrieve remote location by name
 	location = environments.get_location (name)
 
 	if location is None:
@@ -57,7 +57,7 @@ def deploy (logger, environments, modifiers, name, files, rev_from, rev_to):
 	if rev_from is None:
 		rev_from = revisions.get (name)
 
-		if rev_from is None and not prompt (logger, 'No current revision found for location "{0}", maybe you\'re deploying for the first time. Initiate full deploy? [Y/N]'.format (name)):
+		if rev_from is None and not yes and not prompt (logger, 'No current revision found for location "{0}", maybe you\'re deploying for the first time. Initiate full deploy? [Y/N]'.format (name)):
 			return True
 
 	if rev_to is None:
@@ -122,7 +122,7 @@ def deploy (logger, environments, modifiers, name, files, rev_from, rev_to):
 		console = ConsoleTarget ()
 		console.send (logger, work, actions)
 
-		if not prompt (logger, 'Execute synchronization? [Y/N]'):
+		if not yes and not prompt (logger, 'Execute synchronization? [Y/N]'):
 			return True
 
 		# Execute processed actions starting with "DEL" ones
@@ -144,11 +144,9 @@ def deploy (logger, environments, modifiers, name, files, rev_from, rev_to):
 		shutil.rmtree (work)
 
 def main ():
-	global yes
-
 	# Parse command line options
-	parser = argparse.ArgumentParser (description = 'Perform full or incremental deployment, from Git/plain workspace to FTP/SSH/local folder.')
-	parser.add_argument ('names', nargs = '*', help = 'Specify target location name')
+	parser = argparse.ArgumentParser (description = 'Perform incremental deployment from Git/plain workspace to FTP/SSH/local folder.')
+	parser.add_argument ('name', nargs = '*', help = 'Deploy to specified named location')
 	parser.add_argument ('-a', '--extra-add', action = 'append', default = [], help = 'Extra local file/dir to add', metavar = 'PATH')
 	parser.add_argument ('-d', '--extra-del', action = 'append', default = [], help = 'Extra local file/dir to delete', metavar = 'PATH')
 	parser.add_argument ('-e', '--envs', action = 'store', default = '.creep.envs', help = 'Use specified environments file', metavar = 'PATH')
@@ -184,28 +182,35 @@ def main ():
 		else:
 			files.append (src.Action (path, src.Action.DEL))
 
-	# Perform deployment
-	environments = src.Environments (logger, args.envs)
-	modifiers = src.Modifiers (args.mods, args.envs)
-	yes = args.yes
+	# Load environments file or fail
+	if os.path.isfile (args.envs):
+		with open (args.envs, 'rb') as file:
+			environments = src.Environments (logger, file)
+	else:
+		logger.error ('No environments file "{0}" found.'.format (args.envs))
 
-	if len (args.names) < 1:
-		args.names.append ('default')
+		return 1
+
+	# Load modifiers file or use default
+	if os.path.isfile (args.mods):
+		with open (args.mods, 'rb') as file:
+			modifiers = src.Modifiers (file, args.envs)
+	else:
+		modifiers = src.Modifiers (None, args.envs)
+
+	# Perform deployment
+	if len (args.name) < 1:
+		args.name.append ('default')
 
 	code = 0
 
-	for name in args.names:
-		if not deploy (logger, environments, modifiers, name, files, args.rev_from, args.rev_to):
-			code = 1
+	for name in args.name:
+		if not deploy (logger, environments, modifiers, name, files, args.rev_from, args.rev_to, args.yes):
+			code = 2
 
 	return code
 
 def prompt (logger, question):
-	global yes
-
-	if yes:
-		return True
-
 	logger.info (question)
 
 	while True:
