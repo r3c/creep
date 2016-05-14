@@ -12,9 +12,7 @@ class ConsoleTarget:
 				prefix = '((lime))+'
 			elif action.type == action.DEL:
 				prefix = '((blue))-'
-			elif action.type == action.NOP:
-				prefix = '((silver))#'
-			else:
+			elif action.type != action.NOP:
 				prefix = '((red))!'
 
 			logger.info (prefix + '((reset)) ' + action.path)
