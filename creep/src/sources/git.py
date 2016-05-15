@@ -10,32 +10,34 @@ class GitSource:
 	def current (self):
 		revision = Process (['git', 'rev-parse', '--quiet', '--verify', 'HEAD']).execute ()
 
-		if revision is None:
-			return None
+		if revision:
+			return revision.out.strip ()
 
-		return revision.strip ()
+		return None
 
 	def diff (self, logger, work, rev_from, rev_to):
 		# Parse and validate source and target revisions
 		if rev_from is not None:
-			hash_from = Process (['git', 'rev-parse', '--quiet', '--verify', rev_from]).execute ()
+			res_from = Process (['git', 'rev-parse', '--quiet', '--verify', rev_from]).execute ()
 		else:
-			hash_from = Process (['git', 'hash-object', '-t', 'tree', '/dev/null']).execute ()
+			res_from = Process (['git', 'hash-object', '-t', 'tree', '/dev/null']).execute ()
 
-		if hash_from is None:
+		if not res_from:
 			logger.warning ('Invalid source revision "{0}".'.format (rev_from))
+			logger.debug (res_from.err)
 
 			return None
 
-		hash_to = Process (['git', 'rev-parse', '--quiet', '--verify', rev_to]).execute ()
+		res_to = Process (['git', 'rev-parse', '--quiet', '--verify', rev_to]).execute ()
 
-		if hash_to is None:
+		if not res_to:
 			logger.warning ('Invalid target revision "{0}".'.format (rev_to))
+			logger.debug (res_to.err)
 
 			return None
 
-		hash_from = hash_from.strip ()
-		hash_to = hash_to.strip ()
+		hash_from = res_from.out.strip ()
+		hash_to = res_to.out.strip ()
 
 		# Display update information
 		if hash_from != hash_to:
@@ -46,24 +48,26 @@ class GitSource:
 			return []
 
 		# Populate work directory from Git archive
-		archive = Process (['git', 'archive', hash_to, '.']).execute ()
+		archive = Process (['git', 'archive', hash_to, '.']).pipe (['tar', 'xC', work]).execute ()
 
-		if archive is None or Process (['tar', 'xC', work]).set_stdin (archive).execute () is None:
+		if not archive:
 			logger.warning ('Couldn\'t export archive from Git.')
+			logger.debug (archive.err)
 
 			return None
 
 		# Build actions from Git diff output
-		lines = Process (['git', 'diff', '--name-status', '--relative', hash_from, hash_to]).execute ()
+		diff = Process (['git', 'diff', '--name-status', '--relative', hash_from, hash_to]).execute ()
 
-		if lines is None:
+		if not diff:
 			logger.warning ('Couldn\'t get diff from Git.')
+			logger.debug (diff.err)
 
 			return None
 
 		actions = []
 
-		for line in lines.splitlines ():
+		for line in diff.out.splitlines ():
 			(mode, path) = line.split ('\t', 1)
 
 			if mode == 'A' or mode == 'M':

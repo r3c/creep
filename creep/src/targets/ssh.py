@@ -19,8 +19,14 @@ class SSHTarget:
 
 	def read (self, logger, path):
 		command = '! test -f \'{0}\' || cat \'{0}\''.format (pipes.quote (self.directory + '/' + path))
+		result = Process (self.tunnel + [command]).execute ()
 
-		return Process (self.tunnel + [command]).execute ()
+		if not result:
+			logger.debug (result.err)
+
+			return None
+
+		return result.out
 
 	def send (self, logger, work, actions):
 		with tempfile.TemporaryFile () as archive:
@@ -40,14 +46,22 @@ class SSHTarget:
 			archive.seek (0)
 
 			# Send and delete files on remote host
-			if to_add and Process (self.tunnel + ['tar xC \'' + pipes.quote (self.directory) + '\'']).set_stdin (archive.read ()).execute () is None:
-				logger.warning ('Couldn\'t push files to SSH target.')
+			if to_add:
+				result = Process (self.tunnel + ['tar xC \'' + pipes.quote (self.directory) + '\'']).set_input (archive.read ()).execute ()
 
-				return False
+				if not result:
+					logger.warning ('Couldn\'t push files to SSH target.')
+					logger.debug (result.err)
 
-			if len (to_del) > 0 and Process (self.tunnel + ['sh']).set_stdin (';'.join (['rm -f \'' + pipes.quote (path) + '\'' for path in to_del])).execute () is None:
-				logger.warning ('Couldn\'t delete files from SSH target.')
+					return False
 
-				return False
+			if len (to_del) > 0:
+				result = Process (self.tunnel + ['sh']).set_input (';'.join (['rm -f \'' + pipes.quote (path) + '\'' for path in to_del])).execute ()
+				
+				if not result:
+					logger.warning ('Couldn\'t delete files from SSH target.')
+					logger.debug (result.err)
+
+					return False
 
 		return True

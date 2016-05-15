@@ -129,9 +129,12 @@ class Definition:
 		return ([Action (path, type)], [])
 
 	def run (self, work, path, command):
-		return (
-			Process (command.replace ('{}', path))
-				.set_directory (work)
-				.set_shell (True)
-				.execute ()
-		)
+		result = Process (command.replace ('{}', path)) \
+			.set_directory (work) \
+			.set_shell (True) \
+			.execute ()
+
+		if not result:
+			return None
+
+		return result.out

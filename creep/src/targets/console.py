@@ -15,7 +15,7 @@ class ConsoleTarget:
 			elif action.type != action.NOP:
 				prefix = '((red))!'
 			else:
-				return True
+				continue
 
 			logger.info (prefix + '((reset)) ' + action.path)
 

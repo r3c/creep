@@ -37,14 +37,14 @@ class Deploy:
 			data = ''
 
 		if data is None:
-			logger.error ('Can\'t read contents from revision file "{1}" for location "{0}".'.format (name, location.state))
+			logger.error ('Can\'t read contents of revision file "{1}" from location "{0}".'.format (name, location.state))
 
 			return False
 
 		try:
 			revision = Revision (data)
 		except Error as e:
-			logger.error ('Can\'t parse revision from file "{1}" for location "{0}": {2}.'.format (name, location.state, e))
+			logger.error ('Can\'t parse revision from file "{1}" from location "{0}": {2}.'.format (name, location.state, e))
 
 			return False
 
@@ -52,7 +52,7 @@ class Deploy:
 		source = Source.build (definition.source, definition.options, os.getcwd ())
 
 		if source is None:
-			logger.error ('Unknown source type in folder "{1}" for location "{0}", try specifying "source" option in environment file.'.format (name, os.getcwd ()))
+			logger.error ('Unknown source type in folder "{0}", try specifying "source" option in environment file.'.format (os.getcwd ()))
 
 			return False
 
