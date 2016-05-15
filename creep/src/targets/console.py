@@ -14,6 +14,8 @@ class ConsoleTarget:
 				prefix = '((blue))-'
 			elif action.type != action.NOP:
 				prefix = '((red))!'
+			else:
+				return True
 
 			logger.info (prefix + '((reset)) ' + action.path)
 

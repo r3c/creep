@@ -13,7 +13,7 @@ def main ():
 	parser.add_argument ('-a', '--extra-append', action = 'append', default = [], help = 'Manually append file or directory to locations', metavar = 'PATH')
 	parser.add_argument ('-e', '--environment', action = 'store', default = '.creep.env', help = 'Use specified environment file', metavar = 'PATH')
 	parser.add_argument ('-f', '--rev-from', action = 'store', help = 'Initial version used to compute diff', metavar = 'REV')
-	parser.add_argument ('-d', '--definition', action = 'store', default = '.creep.dev', help = 'Use specified definition file', metavar = 'PATH')
+	parser.add_argument ('-d', '--definition', action = 'store', default = '.creep.def', help = 'Use specified definition file', metavar = 'PATH')
 	parser.add_argument ('-q', '--quiet', dest = 'level', action = 'store_const', const = logging.CRITICAL + 1, default = logging.INFO, help = 'Disable logging')
 	parser.add_argument ('-r', '--extra-remove', action = 'append', default = [], help = 'Manually remove file or directory from locations', metavar = 'PATH')
 	parser.add_argument ('-t', '--rev-to', action = 'store', help = 'Target version used to compute diff', metavar = 'REV')
