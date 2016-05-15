@@ -4,14 +4,15 @@ Creep README file
 Overview
 --------
 
-Creep is an incremental deploy tool, allowing delta update from a Git
-repository or a regular directory into a FTP or SSH remote server. It allows
-deployment of any application where files needed on remote servers (e.g.
-production) match files in your repository, meaning it works well with pure
-front-end websites using HTML/CSS/JS or server technologies like PHP.
+Creep is an incremental deploy tool. It allows delta update from any Git
+repository or a regular directory to a FTP or SSH remote server. Its purpose is
+to deploy applications where files needed on remote servers (e.g. production)
+match local files, that is to say when "deployment" actually means "copy with
+some optional files preprocessing". For example it works best for HTML/CSS/JS
+websites or server technologies like PHP.
 
-Deployments are always incremental, meaning Creep keeps track of deployed files
-on all remote locations so that only changed files are send next time. This
+Incremental deploymens means Creep keeps track of deployed files on all remote
+locations. Only modified files are transferred between two deployments. This
 tracking mechanism depends on the type of directory used, for exemple Creep uses
 revision hashes when deploying from a Git repository.
 
@@ -24,26 +25,25 @@ choose to use pip, just type the following:
 	$ pip install creep
 	$ creep -h # display help to ensure install worked properly
 
-If you prefer install Creep manually, checkout the Git repository somewhere and
-create a symbolic link in your `$PATH` to main executable file `creep.py`
-(located in `src` directory). While this is not mandatory (you can prefer to
-call Creep using full path to `creep.py`) it's surely more convenient:
+If you prefer manual install checkout the Git repository anywhere you want. Then
+create a symbolic link in your `$PATH` to file `creep/creep.py`. Last step is
+convenient but not mandatory, you can call Creep using full path to `creep.py`:
 
 	$ git clone https://github.com/r3c/creep.git
 	$ cd creep
-	$ sudo ln -s src/creep.py /usr/bin/creep
+	$ sudo ln -s creep/creep.py /usr/bin/creep
 	$ creep -h # display help
 
-Once Creep is installed, go to your project folder and follow next section to
-quickly create a basic configuration and deploy your first project.
+After installation go to your project folder and continue reading to deploy your
+first project.
 
 Quick start
 -----------
 
 First go to the directory you want to deploy, e.g. the `src` folder of some
-project. It can be located inside a Git repository or just be a regular folder,
-Creep should detect it and use a suitable default configuration. Create a new
-`.creep.env` file inside this directory with following JSON content:
+project. It can be inside a Git repository or just a regular folder, Creep will
+select a suitable default configuration either way. Create a new `.creep.env`
+file inside this directory with following JSON content:
 
 	{
 		"default": {
@@ -56,41 +56,40 @@ saved go back into directory and execute creep with no parameter:
 
 	$ creep
 
-Creep should tell you about deploying this project for the first time and will
-ask you to confirm, enter `Y` to continue. It will then display the full list
-of files in your project (by scanning file system or browsing Git history
-depending on the type of folder you were in), then ask you again to confirm.
-Enter `Y` again and your project will be deployed to directory
+Creep will tell you about deploying this project for the first time and ask you
+to confirm. Enter `Y` to continue. It will display the full list of files in
+your project (by scanning file system or Git history) then ask you again to
+confirm. Enter `Y` and Creep will deploy your project to directory
 `/tmp/creep-quickstart`.
 
 For now "deployment" actually means "copy", since our configuration specifies a
-local deployment directory. This deployment also was a full copy of all files in
-the project rather than an incremental deployment because we were doing it for
-the first time.
+local deployment directory. You noticed this deployment also was full one, not
+an incremental one. This is because we were deploying to this location for
+the first time so no information was available about previous revision.
 
 Now if you try to execute creep again you'll see a message saying no action is
-required, since deployment folder already contains an up-to-date version of your
-project. Now modify some file (and `git commit` them if you were using Git),
-then execute the command again. This time Creep will try to send only the file
-you changed rather than the full project.
+required. Deployment location now contains an up-to-date version of your project
+and Creep saved this information. Try to change some file (and `git commit` them
+if you were using Git) then execute the command again. This time Creep will send
+only the file you changed rather than the full project.
 
 This basic example shows how to incrementally deploy a project to some local
-directory. In next sections we'll see how to deploy to remote locations (through
-FTP or SSH) and register multiple deployment locations.
+directory. Next sections will show how to deploy to remote locations (FTP or
+SSH) and register several locations.
 
 Environment file
 ----------------
 
-As seen in quick start section Creep reads deployment location(s) from a
-configuration file called _environment_ file. It contains one or more named
-location(s) pointing on servers your files should be deployed to. This file
-should be named `.creep.env` and be located in any directory you want to deploy.
+As seen before Creep reads deployment location(s) from a configuration file
+called _environment_ file. It contains one or more named location(s) pointing to
+servers you want to deploy to. Name this file `.creep.env` and put it in any
+directory you want to deploy.
 
-Creep will recursively deploy contents of the directory where your environment
-file is to remote location(s), preserving the same hierarchical structure. You
-can have several environment files in several sub-directories inside your
-projet, e.g. one in `src` directory to deploy executable code and another one in
-`assets` directory to deploy static files to web servers.
+Creep will deploy contents of this directory to remote location(s) and preserve
+hierarchical structure. You can have several environment files in several
+sub-directories inside your projet. For example one in `src` directory to deploy
+executable code and another one in `assets` directory to deploy static files to
+web servers.
 
 Environment configuration file uses JSON format and looks like this:
 
@@ -107,25 +106,23 @@ Environment configuration file uses JSON format and looks like this:
 	}
 
 Elements in the root object specifies an available deployment location. Each one
-must contain at least a `connection` string with protocol and optional address,
+must contain at least a `connection` string specifying protocol, address,
 credentials and/or path. Read details below for more information about supported
 protocols.
 
 Once environment configuration file is ready you can start using Creep. Just
-type `creep <name>` where `<name>` is name of a configured location. When no
-name is specified location `default` is used.
+type `creep <name>` where `<name>` is name of a configured location. If you
+don't specify any name Creep will deploy to `default` location.
 
-Creep will then connect to remote location and try to retrieve information from
-last deployment to compute incremental tasks. When you deploy for the first time
-this information won't be available and Creep will ask you if a full deploy
-should be performed instead. After each successful deployment it will save
-information on remote location in a `.creep.rev` file.
+Creep will then fetch last deployed revision from remote location and compute
+difference. When you deploy for the first time there is no last deployed
+revision so Creep will perform a full deploy. After each successful
+deployment it will save revision to remote location in a `.creep.rev` file.
 
-While storing deployment information on remote location keeps related data
-altogether and works even if you're not the only one performing deployments,
-you may prefer to store them locally instead. In that case just add a new
-`local` option with value `true` for all affected locations in your
-`.creep.env` file:
+Storing revision information on remote location keeps related data altogether
+and works well if you're not the only developer doing deployments. In case you
+prefer storing them locally, just add a new `local` option with value `true`
+for all affected locations in your `.creep.env` file:
 
 	{
 		...
@@ -136,9 +133,8 @@ you may prefer to store them locally instead. In that case just add a new
 		...
 	}
 
-You can specify additional options depending on the protocol you're using. To
-specify options just add an `options` property containing required options as a
-JSON object:
+You can specify some options depending on the protocol you're using. To specify
+options just add a `options` JSON object property holding required options:
 
 	{
 		...
@@ -151,8 +147,8 @@ JSON object:
 		...
 	}
 
-Here is the list of supported protocols, expected connection string format and
-available options for each of them:
+Here is the list of supported protocols with expected connection string format
+and available options:
 
 - Local file system:
   - Use connection format `file:///path` where path is relative to current
@@ -165,29 +161,28 @@ available options for each of them:
     a path relative to FTP user home directory.
   - Boolean option `passive` enables (default) or disables passive mode.
 - SSH:
-  - Use connection format `ssh://user@host:port/path` where variables are
-    similar to the ones used for FTP deployment. No password can be specified
-    here, so you'll need to either enter password manually or setup SSH keys and
-    start SSH agent.
-  - String option `extra` can be used to pass additional parameters to SSH
-    command, as shown in example above.
+  - Use connection format `ssh://user@host:port/path` with same variables than
+    the ones used for FTP deployment. No password can be specified here so
+    you'll need to either enter password manually or setup SSH keys and start
+    SSH agent.
+  - String option `extra` can be used to pass parameters to SSH command as shown
+    in example above.
 
-For all protocols path is relative by default. Start your path by a slash `/`
+Path is relative by default in all protocols. Start your path by a slash `/`
 character to specify an absolute path, e.g. `file:////var/opt/myproject`.
 
 Note that environment files only describe information about external locations
 and may contain passwords. For those reasons they should be excluded from your
-versionning.
+versionning and kept only on machines performing deployments.
 
 Definition file
 ---------------
 
-Creep supports another configuration file, called _definition_ file and used to
-define how local changes must be detected and what pre-processing operations
-must be applied to files before transferring them. This file must be named
-`.creep.def` and be located in the same folder(s) than your environment
-configuration file(s). As opposed to the environment file, definition file is
-bound to your project and shouldn't be excluded from versionning.
+Creep supports another configuration file, called _definition_ file. It's used
+to define how to detect changes what preprocessing operations to apply on files
+upon transfer. Name this file `.creep.def` and put it in the same directories
+your environment files are. As opposed to environment files this one is bound to
+your project and should be shared along with other project files.
 
 Definition configuration file uses JSON format and looks like this:
 
@@ -228,15 +223,14 @@ list of supported sources and associated options:
   - Boolean option `follow` specifies whether symbolic links should be
     followed or ignored (default).
 
-The `modifiers` part allow you to define pre-processing operations that should
-be triggered on files before they're sent to remote locations (e.g. rename,
-compile, minify, obfuscate, etc.). Each modifier must define a regular
-expression in its `pattern` property used to select files it should affect, plus
-a set of processing actions that will be applied on matched files.
+The `modifiers` part defines actions to perform on files before they're sent to
+remote locations (e.g. rename, compile, minify, obfuscate, etc.). Each modifier
+must define a regular expression `pattern` property to select files it affects,
+and processing actions that will be applied on them.
 
-Here is an example of `modifiers` section in a definition configuration
-(remember backslashes must be escaped in JSON, hence the double `\\` used in
-regular expression patterns):
+Here is an example of `modifiers` section in a definition configuration.
+Remember backslashes must be escaped in JSON, hence the double `\\` used in
+regular expression patterns:
 
 	{
 		...
@@ -262,10 +256,10 @@ regular expression patterns):
 		...
 	}
 
-Modifiers are evaluated in sequence and each file can only match one single
-modifier: evaluation stops after the first matched pattern. For each file
-matching a modifier, associated actions (if any) are applied on it. Available
-modifier actions are listed below:
+Creep evaluates modifiers in sequence and one file can only match one modifier:
+evaluation stops after the first matched one. For each file matching a modifier,
+associated actions (if any) are applied on it. Available modifier actions are
+listed below:
 
 - `filter` action specifies a shell command to be executed, where special `{}`
   token is replaced by an absolute path to the file being matched. If this
@@ -297,16 +291,16 @@ modifier actions are listed below:
     to be sure to include all changed files when deploying ; a few false
     positives will just cause harmless extra synchronizations.
 
-A default modifier is always added as last element of the list to filter the
-environment file out of deployments, since it shouldn't be transferred. You may
-override this behavior by adding an explicit modifier on this file.
+Creep always appends two modifiers to filter to exclude environment and
+definition files from deployments. You shouldn't need to change this behavior,
+but you may do so by adding explicit modifiers matching them.
 
 Troubleshooting
 ---------------
 
 This project is still under develpement and may not behave as you would expect.
-The `-v` (verbose) switch may help you understanding how your environment and
-modifiers files are used in case of issue.
+In case of issue the `-v` (verbose) switch may help you understanding how your
+environment and definition files are used.
 
-If you really can't figure out what's happening, don't hesitate to create an
-issue on GitHub or contact me directly!
+If you can't figure out what's happening don't hesitate to open an issue on
+GitHub or contact me!
