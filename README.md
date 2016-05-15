@@ -11,7 +11,7 @@ match local files, that is to say when "deployment" actually means "copy with
 some optional files preprocessing". For example it works best for HTML/CSS/JS
 websites or server technologies like PHP.
 
-Incremental deploymens means Creep keeps track of deployed files on all remote
+Incremental deployment means Creep keeps track of deployed files on all remote
 locations. Only modified files are transferred between two deployments. This
 tracking mechanism depends on the type of directory used, for exemple Creep uses
 revision hashes when deploying from a Git repository.
@@ -52,8 +52,9 @@ file inside this directory with following JSON content:
 	}
 
 Mind the quadruple slash in `file:////tmp/creep-quickstart` string. Once file is
-saved go back into directory and execute creep with no parameter:
+saved, create the directory and execute creep with no parameter:
 
+	$ mkdir /tmp/creep-quickstart
 	$ creep
 
 Creep will tell you about deploying this project for the first time and ask you
@@ -61,11 +62,6 @@ to confirm. Enter `Y` to continue. It will display the full list of files in
 your project (by scanning file system or Git history) then ask you again to
 confirm. Enter `Y` and Creep will deploy your project to directory
 `/tmp/creep-quickstart`.
-
-For now "deployment" actually means "copy", since our configuration specifies a
-local deployment directory. You noticed this deployment also was full one, not
-an incremental one. This is because we were deploying to this location for
-the first time so no information was available about previous revision.
 
 Now if you try to execute creep again you'll see a message saying no action is
 required. Deployment location now contains an up-to-date version of your project
