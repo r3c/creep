@@ -17,7 +17,7 @@ class GitSource:
 
 	def diff (self, logger, work, rev_from, rev_to):
 		# Parse and validate source and target revisions
-		if rev_from is not None:
+		if rev_from is not None and rev_from != '':
 			res_from = Process (['git', 'rev-parse', '--quiet', '--verify', rev_from]).execute ()
 		else:
 			res_from = Process (['git', 'hash-object', '-t', 'tree', '/dev/null']).execute ()
