@@ -9,7 +9,7 @@ import sys
 def main ():
 	# Parse command line options
 	parser = argparse.ArgumentParser (description = 'Perform incremental deployment from Git/plain workspace to FTP/SSH/local folder.')
-	parser.add_argument ('name', nargs = '*', help = 'Deploy to specified named location')
+	parser.add_argument ('name', nargs = '*', help = 'Deploy to specified named location (* = everywhere)')
 	parser.add_argument ('-a', '--extra-append', action = 'append', default = [], help = 'Manually append file or directory to locations', metavar = 'PATH')
 	parser.add_argument ('-e', '--environment', action = 'store', default = '.creep.env', help = 'Use specified environment file', metavar = 'PATH')
 	parser.add_argument ('-f', '--rev-from', action = 'store', help = 'Initial version used to compute diff', metavar = 'REV')
@@ -64,6 +64,8 @@ def main ():
 	# Perform deployment
 	if len (args.name) < 1:
 		args.name.append ('default')
+	elif len (args.name) == 1 and args.name[0] == '*':
+		args.name = environment.locations.keys ()
 
 	code = 0
 

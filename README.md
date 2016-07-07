@@ -107,8 +107,9 @@ credentials and/or path. Read details below for more information about supported
 protocols.
 
 Once environment configuration file is ready you can start using Creep. Just
-type `creep <name>` where `<name>` is name of a configured location. If you
-don't specify any name Creep will deploy to `default` location.
+type `creep <name>` where `<name>` is name of a configured location. You can
+also specify multiple locations, or use `*` to deploy everywhere. If you don't
+specify any name Creep will deploy to `default` location.
 
 Creep will then fetch last deployed revision from remote location and compute
 difference. When you deploy for the first time there is no last deployed
