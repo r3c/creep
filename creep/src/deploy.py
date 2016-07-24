@@ -1,6 +1,8 @@
 #!/usr/bin/env python
 
 from action import Action
+from definition import Definition
+from environment import Environment
 from revision import Revision
 
 import factory
@@ -9,45 +11,82 @@ import path
 import shutil
 import tempfile
 
-def execute (logger, definition, environment, name, append_files, remove_files, rev_from, rev_to, yes):
-	# Retrieve remote location by name
-	location = environment.get_location (name)
-
-	if location is None:
-		logger.error ('There is no location "{0}" in your environment file.'.format (name))
+def execute (logger, base_path, definition_path, environment_path, names, append_files, remove_files, rev_from, rev_to, yes):
+	# Ensure base directory exists
+	if not os.path.isdir (base_path):
+		logger.error ('Invalid base directory "{0}".'.format (base_path))
 
 		return False
 
+	# Load environment file or fail
+	if os.path.isfile (os.path.join (base_path, environment_path)):
+		with open (os.path.join (base_path, environment_path), 'rb') as file:
+			environment = Environment (file)
+	else:
+		logger.error ('No environment file "{0}" found.'.format (environment_path))
+
+		return False
+
+	# Load definition file or use default
+	if os.path.isfile (os.path.join (base_path, definition_path)):
+		with open (os.path.join (base_path, definition_path), 'rb') as file:
+			definition = Definition (file, [environment_path, definition_path])
+	else:
+		definition = Definition (None, [environment_path, definition_path])
+
+	# Perform deployment
+	if len (names) < 1:
+		names.append ('default')
+	elif len (names) == 1 and names[0] == '*':
+		names = environment.locations.keys ()
+
+	# Deploy to target locations
+	ok = True
+
+	for name in names:
+		location = environment.get_location (name)
+
+		if location is None:
+			logger.error ('There is no location "{0}" in your environment file.'.format (name))
+
+			ok = False
+
+		elif not process (logger, definition, location, base_path, append_files, remove_files, rev_from, rev_to, yes):
+			ok = False
+
+	return ok
+
+def process (logger, definition, location, base_path, append_files, remove_files, rev_from, rev_to, yes):
 	# Build target from location connection string
 	target = factory.create_target (logger, location.connection, location.options)
 
 	if target is None:
-		logger.error ('Unsupported scheme in connection string "{1}" for location "{0}".'.format (name, location.connection))
+		logger.error ('Unsupported scheme in connection string "{1}" for location "{0}".'.format (location.name, location.connection))
 
 		return False
 
 	# Read revision file
 	if not location.local:
 		data = target.read (logger, location.state)
-	elif os.path.exists (location.state):
-		data = open (location.state, 'rb').read ()
+	elif os.path.exists (os.path.join (base_path, location.state)):
+		data = open (os.path.join (base_path, location.state), 'rb').read ()
 	else:
 		data = ''
 
 	if data is None:
-		logger.error ('Can\'t read contents of revision file "{1}" from location "{0}".'.format (name, location.state))
+		logger.error ('Can\'t read contents of revision file "{1}" from location "{0}".'.format (location.name, location.state))
 
 		return False
 
 	try:
 		revision = Revision (data)
 	except Error as e:
-		logger.error ('Can\'t parse revision from file "{1}" from location "{0}": {2}.'.format (name, location.state, e))
+		logger.error ('Can\'t parse revision from file "{1}" from location "{0}": {2}.'.format (location.name, location.state, e))
 
 		return False
 
 	# Build source repository reader from current directory
-	source = factory.create_source (definition.source, definition.options, os.getcwd ())
+	source = factory.create_source (definition.source, definition.options, base_path)
 
 	if source is None:
 		logger.error ('Unknown source type in folder "{0}", try specifying "source" option in environment file.'.format (os.getcwd ()))
@@ -56,27 +95,27 @@ def execute (logger, definition, environment, name, append_files, remove_files, 
 
 	# Retrieve source and target revision
 	if rev_from is None:
-		rev_from = revision.get (name)
+		rev_from = revision.get (location.name)
 
-		if rev_from is None and not yes and not prompt (logger, 'No current revision found for location "{0}", maybe you\'re deploying for the first time. Initiate full deploy? [Y/N]'.format (name)):
+		if rev_from is None and not yes and not prompt (logger, 'No current revision found for location "{0}", maybe you\'re deploying for the first time. Initiate full deploy? [Y/N]'.format (location.name)):
 			return True
 
 	if rev_to is None:
-		rev_to = source.current ()
+		rev_to = source.current (base_path)
 
 		if rev_to is None:
-			logger.error ('Can\'t find source version for location "{0}", please ensure your environment file is correctly defined.'.format (name))
+			logger.error ('Can\'t find source version for location "{0}", please ensure your environment file is correctly defined.'.format (location.name))
 
 			return False
 
-	revision.set (name, rev_to)
+	revision.set (location.name, rev_to)
 
 	# Prepare actions
-	work = tempfile.mkdtemp ()
+	work_path = tempfile.mkdtemp ()
 
 	try:
 		# Append actions from revision diff
-		source_actions = source.diff (logger, work, rev_from, rev_to)
+		source_actions = source.diff (logger, base_path, work_path, rev_from, rev_to)
 
 		if source_actions is None:
 			return False
@@ -85,23 +124,31 @@ def execute (logger, definition, environment, name, append_files, remove_files, 
 		manual_actions = []
 
 		for append in location.append_files + append_files:
-			if os.path.isdir (append):
-				for (dirpath, dirnames, filenames) in os.walk (append):
-					manual_actions.extend ((src.Action (os.path.join (dirpath, filename), src.Action.ADD) for filename in filenames))
-			elif os.path.isfile (append):
-				manual_actions.append (src.Action (append, src.Action.ADD))
+			full_path = os.path.join (base_path, append)
+
+			if os.path.isdir (full_path):
+				for (dirpath, dirnames, filenames) in os.walk (full_path):
+					parent_path = os.path.relpath (dirpath, base_path)
+
+					manual_actions.extend ((Action (os.path.join (parent_path, filename), Action.ADD) for filename in filenames))
+			elif os.path.isfile (full_path):
+				manual_actions.append (Action (append, Action.ADD))
 			else:
 				logger.warning ('Can\'t append missing file "{0}".'.format (append))
 
 		for action in manual_actions:
-			path.duplicate (action.path, work, action.path)
+			path.duplicate (os.path.join (base_path, action.path), work_path, action.path)
 
 		for remove in location.remove_files + remove_files:
-			if os.path.isdir (remove):
-				for (dirpath, dirnames, filenames) in os.walk (remove):
-					manual_actions.extend ((src.Action (os.path.join (dirpath, filename), src.Action.DEL) for filename in filenames))
+			full_path = os.path.join (base_path, remove)
+
+			if os.path.isdir (full_path):
+				for (dirpath, dirnames, filenames) in os.walk (full_path):
+					parent_path = os.path.relpath (dirpath, base_path)
+
+					manual_actions.extend ((Action (os.path.join (parent_path, filename), Action.DEL) for filename in filenames))
 			else:
-				manual_actions.append (src.Action (remove, src.Action.DEL))
+				manual_actions.append (Action (remove, Action.DEL))
 
 		# Apply pre-processing modifiers on actions
 		actions = []
@@ -109,31 +156,31 @@ def execute (logger, definition, environment, name, append_files, remove_files, 
 		used = set ()
 
 		for command in source_actions + manual_actions:
-			(actions_append, cancels_append) = definition.apply (logger, work, command.path, command.type, used)
+			(actions_append, cancels_append) = definition.apply (logger, work_path, command.path, command.type, used)
 
 			actions.extend (actions_append)
 			cancels.extend (cancels_append)
 
-		for path in cancels:
-			os.remove (os.path.join (work, path))
+		for cancel in cancels:
+			os.remove (os.path.join (work_path, cancel))
 
 		# Update current revision (remote mode)
 		if rev_from != rev_to and not location.local:
-			with open (os.path.join (work, location.state), 'wb') as file:
+			with open (os.path.join (work_path, location.state), 'wb') as file:
 				file.write (revision.serialize ())
 
 			actions.append (Action (location.state, Action.ADD))
 
 		# Display processed actions using console target
 		if len (actions) < 1:
-			logger.info ('No deployment required for location "{0}".'.format (name))
+			logger.info ('No deployment required for location "{0}".'.format (location.name))
 
 			return True
 
 		from targets.console import ConsoleTarget
 
 		console = ConsoleTarget ()
-		console.send (logger, work, actions)
+		console.send (logger, work_path, actions)
 
 		if not yes and not prompt (logger, 'Execute synchronization? [Y/N]'):
 			return True
@@ -141,20 +188,20 @@ def execute (logger, definition, environment, name, append_files, remove_files, 
 		# Execute processed actions after ordering them by precedence
 		actions.sort (key = lambda action: (action.order (), action.path))
 
-		if not target.send (logger, work, actions):
+		if not target.send (logger, work_path, actions):
 			return False
 
 		# Update current revision (local mode)
 		if location.local:
-			with open (location.state, 'wb') as file:
+			with open (os.path.join (base_path, location.state), 'wb') as file:
 				file.write (revision.serialize ())
 
-		logger.info ('Deployment to location "{0}" done.'.format (name))
+		logger.info ('Deployment to location "{0}" done.'.format (location.name))
 
 		return True
 
 	finally:
-		shutil.rmtree (work)
+		shutil.rmtree (work_path)
 
 def prompt (logger, question):
 	logger.info (question)

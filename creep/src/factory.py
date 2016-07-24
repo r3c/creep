@@ -16,7 +16,7 @@ def create_source (source, options, directory):
 	if source == 'git':
 		from sources.git import GitSource
 
-		return GitSource (directory)
+		return GitSource ()
 
 	# No known source type recognized
 	return None

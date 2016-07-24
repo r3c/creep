@@ -4,23 +4,26 @@ from ..action import Action
 from ..process import Process
 
 class GitSource:
-	def __init__ (self, directory):
-		self.directory = directory
-
-	def current (self):
-		revision = Process (['git', 'rev-parse', '--quiet', '--verify', 'HEAD']).execute ()
+	def current (self, base_path):
+		revision = Process (['git', 'rev-parse', '--quiet', '--verify', 'HEAD']) \
+			.set_directory (base_path) \
+			.execute ()
 
 		if revision:
 			return revision.out.strip ()
 
 		return None
 
-	def diff (self, logger, work, rev_from, rev_to):
+	def diff (self, logger, base_path, work_path, rev_from, rev_to):
 		# Parse and validate source and target revisions
 		if rev_from is not None and rev_from != '':
-			res_from = Process (['git', 'rev-parse', '--quiet', '--verify', rev_from]).execute ()
+			process = Process (['git', 'rev-parse', '--quiet', '--verify', rev_from])
 		else:
-			res_from = Process (['git', 'hash-object', '-t', 'tree', '/dev/null']).execute ()
+			process = Process (['git', 'hash-object', '-t', 'tree', '/dev/null'])
+
+		res_from = process \
+			.set_directory (base_path) \
+			.execute ()
 
 		if not res_from:
 			logger.warning ('Invalid source revision "{0}".'.format (rev_from))
@@ -28,7 +31,9 @@ class GitSource:
 
 			return None
 
-		res_to = Process (['git', 'rev-parse', '--quiet', '--verify', rev_to]).execute ()
+		res_to = Process (['git', 'rev-parse', '--quiet', '--verify', rev_to]) \
+			.set_directory (base_path) \
+			.execute ()
 
 		if not res_to:
 			logger.warning ('Invalid target revision "{0}".'.format (rev_to))
@@ -48,7 +53,10 @@ class GitSource:
 			return []
 
 		# Populate work directory from Git archive
-		archive = Process (['git', 'archive', hash_to, '.']).pipe (['tar', 'xC', work]).execute ()
+		archive = Process (['git', 'archive', hash_to, '.']) \
+			.set_directory (base_path) \
+			.pipe (['tar', 'xC', work_path]) \
+			.execute ()
 
 		if not archive:
 			logger.warning ('Couldn\'t export archive from Git.')
@@ -57,7 +65,9 @@ class GitSource:
 			return None
 
 		# Build actions from Git diff output
-		diff = Process (['git', 'diff', '--name-status', '--relative', hash_from, hash_to]).execute ()
+		diff = Process (['git', 'diff', '--name-status', '--relative', hash_from, hash_to]) \
+			.set_directory (base_path) \
+			.execute ()
 
 		if not diff:
 			logger.warning ('Couldn\'t get diff from Git.')
