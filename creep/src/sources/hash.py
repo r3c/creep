@@ -15,7 +15,7 @@ class HashSource:
 		return self.scan (self.directory)
 
 	def diff (self, logger, work, rev_from, rev_to):
-		return self.prepare (work, rev_from or {}, rev_to or {}, '')
+		return self.recurse (work, rev_from or {}, rev_to or {}, '')
 
 	def digest (self, path):
 		hash = hashlib.new (self.algorithm)
@@ -26,7 +26,7 @@ class HashSource:
 
 		return hash.hexdigest ()
 
-	def prepare (self, work, entries_from, entries_to, base):
+	def recurse (self, work, entries_from, entries_to, base):
 		actions = []
 
 		for name in set (entries_from.keys () + entries_to.keys ()):
@@ -37,14 +37,14 @@ class HashSource:
 			# Define action and recurse depending on "from" and "to" entries
 			if isinstance (entry_from, dict):
 				if isinstance (entry_to, dict):
-					actions.extend (self.prepare (work, entry_from, entry_to, path))
+					actions.extend (self.recurse (work, entry_from, entry_to, path))
 					action = None
 				else:
-					actions.extend (self.prepare (work, entry_from, {}, path))
+					actions.extend (self.recurse (work, entry_from, {}, path))
 					action = entry_to is not None and Action (path, Action.ADD) or None
 			else:
 				if isinstance (entry_to, dict):
-					actions.extend (self.prepare (work, {}, entry_to, path))
+					actions.extend (self.recurse (work, {}, entry_to, path))
 					action = entry_from is not None and Action (path, Action.DEL) or None
 				elif entry_from != entry_to:
 					action = Action (path, entry_to is not None and Action.ADD or Action.DEL)

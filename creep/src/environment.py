@@ -5,9 +5,11 @@ import os
 
 class EnvironmentLocation:
 	def __init__ (self, location):
+		self.append_files = location.get ('append_files', [])
 		self.connection = location['connection']
 		self.local = location.get ('local', False)
 		self.options = location.get ('options', {})
+		self.remove_files = location.get ('remove_files', [])
 		self.state = location.get ('state', '.creep.rev')
 
 class Environment:

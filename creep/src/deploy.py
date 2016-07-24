@@ -11,7 +11,7 @@ import tempfile
 
 class Deploy:
 	@staticmethod
-	def execute (logger, definition, environment, name, files, rev_from, rev_to, yes):
+	def execute (logger, definition, environment, name, append_files, remove_files, rev_from, rev_to, yes):
 		# Retrieve remote location by name
 		location = environment.get_location (name)
 
@@ -79,19 +79,37 @@ class Deploy:
 		try:
 			commands = []
 
-			# Append commands from revision diff
-			diff = source.diff (logger, work, rev_from, rev_to)
+			# Append actions from revision diff
+			source_actions = source.diff (logger, work, rev_from, rev_to)
 
-			if diff is None:
+			if source_actions is None:
 				return False
 
-			commands.extend (diff)
+			commands.extend (source_actions)
 
-			# Append commands from manually specified files
-			for action in files:
+			# Append actions for manually specified files
+			extra_actions = []
+
+			for path in location.append_files + append_files:
+				if os.path.isdir (path):
+					for (dirpath, dirnames, filenames) in os.walk (path):
+						extra_actions.extend ((src.Action (os.path.join (dirpath, filename), src.Action.ADD) for filename in filenames))
+				elif os.path.isfile (path):
+					extra_actions.append (src.Action (path, src.Action.ADD))
+				else:
+					logger.warning ('Can\'t append missing file "{0}".'.format (path))
+
+			for action in extra_actions:
 				action.prepare (work)
 
-			commands.extend (files)
+			for path in location.remove_files + remove_files:
+				if os.path.isdir (path):
+					for (dirpath, dirnames, filenames) in os.walk (path):
+						extra_actions.extend ((src.Action (os.path.join (dirpath, filename), src.Action.DEL) for filename in filenames))
+				else:
+					extra_actions.append (src.Action (path, src.Action.DEL))
+
+			commands.extend (extra_actions)
 
 			# Apply pre-processing modifiers on actions
 			actions = []
