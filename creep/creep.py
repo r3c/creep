@@ -3,8 +3,9 @@
 import argparse
 import logging
 import os
-import src
 import sys
+
+from src import Definition, Environment, Logger, deploy
 
 def main ():
 	# Parse command line options
@@ -25,13 +26,13 @@ def main ():
 	args = parser.parse_args ()
 
 	# Initialize logger
-	logger = src.Logger.build ()
+	logger = Logger.build ()
 	logger.setLevel (args.level)
 
 	# Load environment file or fail
 	if os.path.isfile (args.environment):
 		with open (args.environment, 'rb') as file:
-			environment = src.Environment (file)
+			environment = Environment (file)
 	else:
 		logger.error ('No environment file "{0}" found.'.format (args.environment))
 
@@ -40,9 +41,9 @@ def main ():
 	# Load definition file or use default
 	if os.path.isfile (args.definition):
 		with open (args.definition, 'rb') as file:
-			definition = src.Definition (file, [args.environment, args.definition])
+			definition = Definition (file, [args.environment, args.definition])
 	else:
-		definition = src.Definition (None, [args.environment, args.definition])
+		definition = Definition (None, [args.environment, args.definition])
 
 	# Perform deployment
 	if len (args.name) < 1:
@@ -56,7 +57,7 @@ def main ():
 		append_files = args.append_file + args.extra_append
 		remove_files = args.remove_file + args.extra_append
 
-		if not src.Deploy.execute (logger, definition, environment, name, append_files, remove_files, args.rev_from, args.rev_to, args.yes):
+		if not deploy.execute (logger, definition, environment, name, append_files, remove_files, args.rev_from, args.rev_to, args.yes):
 			code = 2
 
 	return code

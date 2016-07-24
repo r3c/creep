@@ -3,7 +3,7 @@
 from ..action import Action
 
 class ConsoleTarget:
-	def read (self, logger, path):
+	def read (self, logger, relative):
 		raise Exception ('can\'t read from console target')
 
 	def send (self, logger, work, actions):

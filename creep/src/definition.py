@@ -67,7 +67,7 @@ class Definition:
 			logger.debug ('File \'{0}\' matches \'{1}\'.'.format (path, modifier.regex.pattern))
 
 			actions = []
-			deletes = []
+			cancels = []
 
 			# Apply renaming pattern if any
 			if modifier.rename is not None:
@@ -86,10 +86,10 @@ class Definition:
 						for link in out.splitlines ():
 							logger.debug ('File \'{0}\' is linked to file \'{1}\'.'.format (path, link))
 
-							(actions_append, deletes_append) = self.apply (logger, work, link, type, used)
+							(actions_append, cancels_append) = self.apply (logger, work, link, type, used)
 
 							actions.extend (actions_append)
-							deletes.extend (deletes_append)
+							cancels.extend (cancels_append)
 					else:
 						logger.debug ('Command \'link\' on file \'{0}\' returned non-zero code.'.format (path))
 
@@ -106,13 +106,13 @@ class Definition:
 						type = Action.ERR
 
 					if path != path_new:
-						deletes.append (path)
+						cancels.append (path)
 
 				# Otherwise, copy original to renamed
 				elif path != path_new:
 					shutil.copy (os.path.join (work, path), os.path.join (work, path_new))
 
-					deletes.append (path)
+					cancels.append (path)
 
 			# Apply filtering command if any
 			if modifier.filter is not None and (modifier.filter == '' or self.run (work, path, modifier.filter) is None):
@@ -123,7 +123,7 @@ class Definition:
 			# Append action to list and return
 			actions.append (Action (path_new, type))
 
-			return (actions, deletes)
+			return (actions, cancels)
 
 		# No modifier matched, return unmodified input
 		return ([Action (path, type)], [])

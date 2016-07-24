@@ -6,7 +6,7 @@ import itertools
 import os
 
 from ..action import Action
-from ..path import explode
+from .. import path
 
 class FTPTarget:
 	def __init__ (self, host, port, user, password, directory, options):
@@ -46,7 +46,7 @@ class FTPTarget:
 	def escape (self, path):
 		return path # FIXME: wrong escape [ftp-escape]
 
-	def read (self, logger, path):
+	def read (self, logger, relative):
 		ftp = self.connect (logger)
 
 		if ftp is None:
@@ -54,7 +54,7 @@ class FTPTarget:
 
 		with io.BytesIO () as buffer:
 			try:
-				ftp.retrbinary ('RETR ' + self.escape (path), buffer.write)
+				ftp.retrbinary ('RETR ' + self.escape (relative), buffer.write)
 
 				return buffer.getvalue ()
 
@@ -82,11 +82,11 @@ class FTPTarget:
 			for (directory, files) in itertools.groupby (commands, lambda command: command[0]):
 				# Must create directory before uploading files to it
 				create = True
-				names = explode (directory)
+				names = path.explode (directory)
 
 				# Append or delete files
 				for (head, tail, type) in files:
-					path = self.escape (head and head + '/' + tail or tail)
+					target = self.escape (head and head + '/' + tail or tail)
 
 					if type == Action.ADD:
 						# Create missing parent directories
@@ -102,12 +102,12 @@ class FTPTarget:
 
 						# Upload current file
 						with open (os.path.join (work, head, tail), 'rb') as file:
-							ftp.storbinary ('STOR ' + path, file)
+							ftp.storbinary ('STOR ' + target, file)
 
 					elif type == Action.DEL:
 						# Delete file if exists
 						try:
-							ftp.delete (path)
+							ftp.delete (target)
 						except ftplib.all_errors as e:
 							if not e.message.startswith ('550 '):
 								raise e

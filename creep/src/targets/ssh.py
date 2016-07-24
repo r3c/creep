@@ -17,8 +17,8 @@ class SSHTarget:
 		self.directory = directory
 		self.tunnel = ['ssh', '-T', '-p', str (port or 22)] + extra + [remote]
 
-	def read (self, logger, path):
-		command = '! test -f \'{0}\' || cat \'{0}\''.format (pipes.quote (self.directory + '/' + path))
+	def read (self, logger, relative):
+		command = '! test -f \'{0}\' || cat \'{0}\''.format (pipes.quote (self.directory + '/' + relative))
 		result = Process (self.tunnel + [command]).execute ()
 
 		if not result:

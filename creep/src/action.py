@@ -1,8 +1,5 @@
 #!/usr/bin/env python
 
-import os
-import shutil
-
 class Action:
 	ADD = 1
 	DEL = 2
@@ -13,12 +10,12 @@ class Action:
 		self.path = path
 		self.type = type
 
-	def prepare (self, work):
-		if self.type == Action.ADD:
-			target = os.path.join (work, self.path)
-			directory = os.path.dirname (target)
-
-			if not os.path.isdir (directory):
-				os.makedirs (directory)
-
-			shutil.copy (self.path, target)
+	def order (self):
+		if self.type == Action.DEL:
+			return 0
+		elif self.type == Action.ADD:
+			return 1
+		elif self.type == Action.NOP:
+			return 2
+		else:
+			return 3
