@@ -18,7 +18,7 @@ class SSHTarget:
 		self.tunnel = ['ssh', '-T', '-p', str (port or 22)] + extra + [remote]
 
 	def read (self, logger, relative):
-		command = '! test -f \'{0}\' || cat \'{0}\''.format (pipes.quote (self.directory + '/' + relative))
+		command = 'test -d \'{0}\' && ( test ! -f \'{1}\' || cat \'{1}\' )'.format (pipes.quote (self.directory), pipes.quote (self.directory + '/' + relative))
 		result = Process (self.tunnel + [command]).execute ()
 
 		if not result:
