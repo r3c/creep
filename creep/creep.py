@@ -31,7 +31,7 @@ def main ():
 
 	if not deploy.execute (
 		logger,
-		os.path.join (os.getcwd (), args.base),
+		args.base,
 		args.definition,
 		args.environment,
 		args.name,

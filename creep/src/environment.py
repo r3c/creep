@@ -5,12 +5,13 @@ import json
 class EnvironmentLocation:
 	def __init__ (self, name, location):
 		self.append_files = location.get ('append_files', [])
-		self.connection = location['connection']
+		self.connection = location.get ('connection', None)
 		self.local = location.get ('local', False)
 		self.name = name
 		self.options = location.get ('options', {})
 		self.remove_files = location.get ('remove_files', [])
 		self.state = location.get ('state', '.creep.rev')
+		self.subsidiaries = dict (((path, isinstance (name, list) and name or [name]) for path, name in location.get ('subsidiaries', {}).iteritems ()))
 
 class Environment:
 	def __init__ (self, file):

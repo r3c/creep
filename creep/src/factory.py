@@ -11,7 +11,7 @@ def create_source (source, options, directory):
 	if source == 'delta' or source == 'hash':
 		from sources.hash import HashSource
 
-		return HashSource (directory, options)
+		return HashSource (options)
 
 	if source == 'git':
 		from sources.git import GitSource
@@ -60,7 +60,7 @@ def create_target (logger, connection, options):
 	return None
 
 def detect (directory):
-	names = path.explode (directory)
+	names = path.explode (os.path.abspath (directory))
 
 	# Detect '.git' file or directory in parent folders
 	if any ((os.path.exists (os.path.join (*(names[0:n] + ['.git']))) for n in range (len (names), 0, -1))):

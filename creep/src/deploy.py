@@ -12,29 +12,38 @@ import shutil
 import tempfile
 
 def execute (logger, base_path, definition_path, environment_path, names, append_files, remove_files, rev_from, rev_to, yes):
-	# Ensure base directory exists
+	# Ensure base directory is valid
+	if os.path.isabs (base_path):
+		logger.error ('Base directory "{0}" must be a relative path.'.format (base_path))
+
+		return False
+
 	if not os.path.isdir (base_path):
-		logger.error ('Invalid base directory "{0}".'.format (base_path))
+		logger.error ('Base directory "{0}" doesn\'t exist.'.format (base_path))
 
 		return False
 
 	# Load environment file or fail
-	if os.path.isfile (os.path.join (base_path, environment_path)):
-		with open (os.path.join (base_path, environment_path), 'rb') as file:
+	full_path = os.path.join (base_path, environment_path)
+
+	if os.path.isfile (full_path):
+		with open (full_path, 'rb') as file:
 			environment = Environment (file)
 	else:
-		logger.error ('No environment file "{0}" found.'.format (environment_path))
+		logger.error ('No environment file "{0}" found.'.format (full_path))
 
 		return False
 
 	# Load definition file or use default
-	if os.path.isfile (os.path.join (base_path, definition_path)):
-		with open (os.path.join (base_path, definition_path), 'rb') as file:
+	full_path = os.path.join (base_path, definition_path)
+
+	if os.path.isfile (full_path):
+		with open (full_path, 'rb') as file:
 			definition = Definition (file, [environment_path, definition_path])
 	else:
 		definition = Definition (None, [environment_path, definition_path])
 
-	# Perform deployment
+	# Expand location names
 	if len (names) < 1:
 		names.append ('default')
 	elif len (names) == 1 and names[0] == '*':
@@ -49,10 +58,21 @@ def execute (logger, base_path, definition_path, environment_path, names, append
 		if location is None:
 			logger.error ('There is no location "{0}" in your environment file.'.format (name))
 
+			continue
+
+		if location.connection is not None and not process (logger, definition, location, base_path, append_files, remove_files, rev_from, rev_to, yes):
 			ok = False
 
-		elif not process (logger, definition, location, base_path, append_files, remove_files, rev_from, rev_to, yes):
-			ok = False
+			continue
+
+		for sub_path, sub_names in location.subsidiaries.iteritems ():
+			full_path = os.path.join (base_path, sub_path)
+
+			logger.info ('Entering subsidiary path "{0}"'.format (full_path))
+
+			ok = execute (logger, full_path, definition_path, environment_path, sub_names, [], [], None, None, yes) and ok
+
+			logger.info ('Leaving subsidiary path "{0}"'.format (full_path))
 
 	return ok
 
@@ -89,7 +109,7 @@ def process (logger, definition, location, base_path, append_files, remove_files
 	source = factory.create_source (definition.source, definition.options, base_path)
 
 	if source is None:
-		logger.error ('Unknown source type in folder "{0}", try specifying "source" option in environment file.'.format (os.getcwd ()))
+		logger.error ('Unknown source type in folder "{0}", try specifying "source" option in definition file.'.format (base_path))
 
 		return False
 
@@ -196,12 +216,12 @@ def process (logger, definition, location, base_path, append_files, remove_files
 			with open (os.path.join (base_path, location.state), 'wb') as file:
 				file.write (revision.serialize ())
 
-		logger.info ('Deployment to location "{0}" done.'.format (location.name))
-
-		return True
-
 	finally:
 		shutil.rmtree (work_path)
+
+	logger.info ('Deployment to location "{0}" done.'.format (location.name))
+
+	return True
 
 def prompt (logger, question):
 	logger.info (question)
