@@ -33,7 +33,7 @@ class LoggerColorStreamHandler (logging.StreamHandler):
 
 		self.end = getattr (self, 'terminator', '\n')
 		self.levels = {logging.CRITICAL: 'red', logging.DEBUG: 'olive', logging.ERROR: 'red', logging.INFO: 'white', logging.WARNING: 'yellow'}
-		self.tags = re.compile (re.escape (self.COLOR_BEGIN) + '([0-9A-Za-z_]+)' + re.escape (self.COLOR_END))
+		self.tags = re.compile (re.escape (self.COLOR_BEGIN) + '(' + '|'.join (self.colors.keys ()) + ')' + re.escape (self.COLOR_END))
 
 	def is_tty (self):
 		isatty = getattr (self.stream, 'isatty', None)
