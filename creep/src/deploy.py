@@ -13,11 +13,6 @@ import tempfile
 
 def execute (logger, base_path, definition_path, environment_path, names, append_files, remove_files, rev_from, rev_to, yes):
 	# Ensure base directory is valid
-	if os.path.isabs (base_path):
-		logger.error ('Base directory "{0}" must be a relative path.'.format (base_path))
-
-		return False
-
 	if not os.path.isdir (base_path):
 		logger.error ('Base directory "{0}" doesn\'t exist.'.format (base_path))
 
@@ -157,7 +152,8 @@ def process (logger, definition, location, base_path, append_files, remove_files
 				logger.warning ('Can\'t append missing file "{0}".'.format (append))
 
 		for action in manual_actions:
-			path.duplicate (os.path.join (base_path, action.path), work_path, action.path)
+			if not path.duplicate (os.path.join (base_path, action.path), work_path, action.path):
+				logger.warning ('Can\'t copy file "{0}".'.format (action.path))
 
 		for remove in location.remove_files + remove_files:
 			full_path = os.path.join (base_path, remove)
@@ -182,7 +178,7 @@ def process (logger, definition, location, base_path, append_files, remove_files
 			cancels.extend (cancels_append)
 
 		for cancel in cancels:
-			os.remove (os.path.join (work_path, cancel))
+			path.remove (work_path, cancel)
 
 		# Update current revision (remote mode)
 		if rev_from != rev_to and not location.local:

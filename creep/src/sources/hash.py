@@ -31,7 +31,7 @@ class HashSource:
 		return entries
 
 	def diff (self, logger, base_path, work_path, rev_from, rev_to):
-		return self.recurse (base_path, work_path, rev_from or {}, rev_to or {})
+		return self.recurse (base_path, work_path, '.', rev_from or {}, rev_to or {})
 
 	def digest (self, path):
 		hash = hashlib.new (self.algorithm)
@@ -42,7 +42,7 @@ class HashSource:
 
 		return hash.hexdigest ()
 
-	def recurse (self, parent, work_path, entries_from, entries_to):
+	def recurse (self, base_path, work_path, parent, entries_from, entries_to):
 		actions = []
 
 		for name in set (entries_from.keys () + entries_to.keys ()):
@@ -54,31 +54,28 @@ class HashSource:
 			if isinstance (entry_from, dict):
 				# Path was and still is a directory => recurse
 				if isinstance (entry_to, dict):
-					actions.extend (self.recurse (source, work_path, entry_from, entry_to))
+					actions.extend (self.recurse (base_path, work_path, source, entry_from, entry_to))
 
 				else:
 					# Path was a directory but is now a file => add
-					if entry_to is not None:
+					if entry_to is not None and path.duplicate (os.path.join (base_path, source), work_path, source):
 						actions.append (Action (source, Action.ADD))
-						path.duplicate (source, work_path, source)
 
 					# Path was a directory and now isn't => recurse with no rhs
-					actions.extend (self.recurse (source, work_path, entry_from, {}))
+					actions.extend (self.recurse (base_path, work_path, source, entry_from, {}))
 
 			elif isinstance (entry_to, dict):
 				# Path was a file but is now a directory => del
-				if entry_from is not None:
+				if entry_from is not None and path.duplicate (os.path.join (base_path, source), work_path, source):
 					actions.append (Action (source, Action.DEL))
-					path.duplicate (source, work_path, source)
 
 				# Path wasn't a directory and now is => recurse with no lhs
-				actions.extend (self.recurse (source, work_path, {}, entry_to))
+				actions.extend (self.recurse (base_path, work_path, source, {}, entry_to))
 
 			elif entry_from != entry_to:
 				# Path is now a file => add
-				if entry_to is not None:
+				if entry_to is not None and path.duplicate (os.path.join (base_path, source), work_path, source):
 					actions.append (Action (source, Action.ADD))
-					path.duplicate (source, work_path, source)
 
 				# Path is empty => del
 				else:

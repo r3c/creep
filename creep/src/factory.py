@@ -36,12 +36,12 @@ def create_target (logger, connection, options):
 	user = match.group (2) is not None and urllib.unquote_plus (match.group (2)) or match.group (2)
 
 	if scheme == 'file':
-		if host is not None or password is not None or port is not None or user is not None:
-			logger.warn ('Connection string for "file" scheme shouldn\'t contain any host, port, user or password.')
+		if password is not None or port is not None or user is not None:
+			logger.warn ('Connection string for "file" scheme shouldn\'t contain any port, user or password.')
 
 		from targets.file import FileTarget
 
-		return FileTarget (directory)
+		return FileTarget (os.path.join (host, directory))
 
 	if scheme == 'ftp':
 		from targets.ftp import FTPTarget

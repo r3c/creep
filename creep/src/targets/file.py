@@ -24,12 +24,11 @@ class FileTarget:
 	def send (self, logger, work, actions):
 		for action in actions:
 			if action.type == action.ADD:
-				path.duplicate (action.path, self.directory, action.path)
+				if not path.duplicate (os.path.join (work, action.path), self.directory, action.path):
+					logger.warning ('Can\'t copy file "{1}" to target directory "{0}"'.format (self.directory, action.path))
 
 			elif action.type == action.DEL:
-				target = os.path.join (self.directory, action.path)
-
-				if os.path.isfile (target):
-					os.remove (target)
+				if not path.remove (self.directory, action.path):
+					logger.warning ('Can\'t remove file "{1}" from target directory "{0}"'.format (self.directory, action.path))
 
 		return True
