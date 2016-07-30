@@ -50,34 +50,37 @@ class HashSource:
 			entry_to = entries_to.get (name, None)
 			source = os.path.join (parent, name)
 
-			# Define action and recurse depending on "from" and "to" entries
+			# Path was a directory on previous version
 			if isinstance (entry_from, dict):
-				# Path was and still is a directory => recurse
+				# Path is still a directory => compare recursively
 				if isinstance (entry_to, dict):
 					actions.extend (self.recurse (base_path, work_path, source, entry_from, entry_to))
 
+				# Path is no longer a directory
 				else:
-					# Path was a directory but is now a file => add
+					# Path is now a file => add
 					if entry_to is not None and path.duplicate (os.path.join (base_path, source), work_path, source):
 						actions.append (Action (source, Action.ADD))
 
-					# Path was a directory and now isn't => recurse with no rhs
+					# Recurse with no right hand side to delete contents
 					actions.extend (self.recurse (base_path, work_path, source, entry_from, {}))
 
+			# Path wasn't a directory on previous version but now is
 			elif isinstance (entry_to, dict):
-				# Path was a file but is now a directory => del
+				# Path was a file => delete
 				if entry_from is not None and path.duplicate (os.path.join (base_path, source), work_path, source):
 					actions.append (Action (source, Action.DEL))
 
-				# Path wasn't a directory and now is => recurse with no lhs
+				# Recurse with no left hand side to add contents
 				actions.extend (self.recurse (base_path, work_path, source, {}, entry_to))
 
+			# Path wasn't and isn't a directory but changed
 			elif entry_from != entry_to:
 				# Path is now a file => add
 				if entry_to is not None and path.duplicate (os.path.join (base_path, source), work_path, source):
 					actions.append (Action (source, Action.ADD))
 
-				# Path is empty => del
+				# Path no longer exists => delete
 				else:
 					actions.append (Action (source, Action.DEL))
 

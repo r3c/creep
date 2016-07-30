@@ -55,7 +55,7 @@ def execute (logger, base_path, definition_path, environment_path, names, append
 
 			continue
 
-		if location.connection is not None and not process (logger, definition, location, base_path, append_files, remove_files, rev_from, rev_to, yes):
+		if location.connection is not None and not sync (logger, definition, location, base_path, append_files, remove_files, rev_from, rev_to, yes):
 			ok = False
 
 			continue
@@ -71,7 +71,28 @@ def execute (logger, base_path, definition_path, environment_path, names, append
 
 	return ok
 
-def process (logger, definition, location, base_path, append_files, remove_files, rev_from, rev_to, yes):
+def prompt (logger, question):
+	logger.info (question)
+
+	while True:
+		answer = raw_input ()
+
+		if answer == 'N' or answer == 'n':
+			return False
+		elif answer == 'Y' or answer == 'y':
+			return True
+
+		logger.warning ('Invalid answer')
+
+def sync (logger, definition, location, base_path, append_files, remove_files, rev_from, rev_to, yes):
+	# Build source repository reader from current directory
+	source = factory.create_source (definition.source, definition.options, base_path)
+
+	if source is None:
+		logger.error ('Unknown source type in folder "{0}", try specifying "source" option in definition file.'.format (base_path))
+
+		return False
+
 	# Build target from location connection string
 	target = factory.create_target (logger, location.connection, location.options)
 
@@ -89,7 +110,7 @@ def process (logger, definition, location, base_path, append_files, remove_files
 		data = ''
 
 	if data is None:
-		logger.error ('Can\'t read contents of revision file "{1}" from location "{0}".'.format (location.name, location.state))
+		logger.error ('Can\'t read revision file "{1}" from location "{0}", check connection string and ensure parent directory exists.'.format (location.name, location.state))
 
 		return False
 
@@ -97,14 +118,6 @@ def process (logger, definition, location, base_path, append_files, remove_files
 		revision = Revision (data)
 	except Error as e:
 		logger.error ('Can\'t parse revision from file "{1}" from location "{0}": {2}.'.format (location.name, location.state, e))
-
-		return False
-
-	# Build source repository reader from current directory
-	source = factory.create_source (definition.source, definition.options, base_path)
-
-	if source is None:
-		logger.error ('Unknown source type in folder "{0}", try specifying "source" option in definition file.'.format (base_path))
 
 		return False
 
@@ -198,7 +211,7 @@ def process (logger, definition, location, base_path, append_files, remove_files
 		console = ConsoleTarget ()
 		console.send (logger, work_path, actions)
 
-		if not yes and not prompt (logger, 'Execute synchronization? [Y/N]'):
+		if not yes and not prompt (logger, 'Deploy? [Y/N]'):
 			return True
 
 		# Execute processed actions after ordering them by precedence
@@ -218,16 +231,3 @@ def process (logger, definition, location, base_path, append_files, remove_files
 	logger.info ('Deployment to location "{0}" done.'.format (location.name))
 
 	return True
-
-def prompt (logger, question):
-	logger.info (question)
-
-	while True:
-		answer = raw_input ()
-
-		if answer == 'N' or answer == 'n':
-			return False
-		elif answer == 'Y' or answer == 'y':
-			return True
-
-		logger.warning ('Invalid answer')
