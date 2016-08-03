@@ -55,19 +55,23 @@ def execute (logger, base_path, definition_path, environment_path, names, append
 
 			continue
 
-		if location.connection is not None and not sync (logger, definition, location, base_path, append_files, remove_files, rev_from, rev_to, yes):
-			ok = False
+		if location.connection is not None:
+			logger.info ('Deploying to location "{0}"...'.format (name))
 
-			continue
+			if not sync (logger, base_path, definition, location, name, append_files, remove_files, rev_from, rev_to, yes):
+				ok = False
+
+				continue
 
 		for sub_path, sub_names in location.subsidiaries.iteritems ():
 			full_path = os.path.join (base_path, sub_path)
 
-			logger.info ('Entering subsidiary path "{0}"'.format (full_path))
+			logger.info ('Processing subsidiary path "{0}"...'.format (full_path))
+			logger.enter ()
 
 			ok = execute (logger, full_path, definition_path, environment_path, sub_names, [], [], None, None, yes) and ok
 
-			logger.info ('Leaving subsidiary path "{0}"'.format (full_path))
+			logger.leave ()
 
 	return ok
 
@@ -84,7 +88,7 @@ def prompt (logger, question):
 
 		logger.warning ('Invalid answer')
 
-def sync (logger, definition, location, base_path, append_files, remove_files, rev_from, rev_to, yes):
+def sync (logger, base_path, definition, location, name, append_files, remove_files, rev_from, rev_to, yes):
 	# Build source repository reader from current directory
 	source = factory.create_source (definition.source, definition.options, base_path)
 
@@ -97,7 +101,7 @@ def sync (logger, definition, location, base_path, append_files, remove_files, r
 	target = factory.create_target (logger, location.connection, location.options)
 
 	if target is None:
-		logger.error ('Unsupported scheme in connection string "{1}" for location "{0}".'.format (location.name, location.connection))
+		logger.error ('Unsupported scheme in connection string "{0}".'.format (location.connection))
 
 		return False
 
@@ -110,33 +114,33 @@ def sync (logger, definition, location, base_path, append_files, remove_files, r
 		data = ''
 
 	if data is None:
-		logger.error ('Can\'t read revision file "{1}" from location "{0}", check connection string and ensure parent directory exists.'.format (location.name, location.state))
+		logger.error ('Can\'t read revision file "{0}", check connection string and ensure parent directory exists.'.format (location.state))
 
 		return False
 
 	try:
 		revision = Revision (data)
 	except Error as e:
-		logger.error ('Can\'t parse revision from file "{1}" from location "{0}": {2}.'.format (location.name, location.state, e))
+		logger.error ('Can\'t parse revision from file "{0}": {1}.'.format (location.state, e))
 
 		return False
 
 	# Retrieve source and target revision
 	if rev_from is None:
-		rev_from = revision.get (location.name)
+		rev_from = revision.get (name)
 
-		if rev_from is None and not yes and not prompt (logger, 'No current revision found for location "{0}", maybe you\'re deploying for the first time. Initiate full deploy? [Y/N]'.format (location.name)):
+		if rev_from is None and not yes and not prompt (logger, 'No current revision found, maybe you\'re deploying for the first time. Initiate full deploy? [Y/N]'):
 			return True
 
 	if rev_to is None:
 		rev_to = source.current (base_path)
 
 		if rev_to is None:
-			logger.error ('Can\'t find source version for location "{0}", please ensure your environment file is correctly defined.'.format (location.name))
+			logger.error ('Can\'t find source version, please ensure your environment file is correctly defined.')
 
 			return False
 
-	revision.set (location.name, rev_to)
+	revision.set (name, rev_to)
 
 	# Prepare actions
 	work_path = tempfile.mkdtemp ()
@@ -202,7 +206,7 @@ def sync (logger, definition, location, base_path, append_files, remove_files, r
 
 		# Display processed actions using console target
 		if len (actions) < 1:
-			logger.info ('No deployment required for location "{0}".'.format (location.name))
+			logger.info ('No deployment required.')
 
 			return True
 
@@ -228,6 +232,6 @@ def sync (logger, definition, location, base_path, append_files, remove_files, r
 	finally:
 		shutil.rmtree (work_path)
 
-	logger.info ('Deployment to location "{0}" done.'.format (location.name))
+	logger.info ('Deployment done.')
 
 	return True

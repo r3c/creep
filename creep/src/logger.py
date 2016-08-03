@@ -3,13 +3,13 @@
 import logging
 import re
 
-class LoggerColorStreamHandler (logging.StreamHandler):
+class ColorStreamHandler (logging.StreamHandler):
 	COLOR_BEGIN = '(('
 	COLOR_END = '))'
 	RESET = '\033[0m'
 
 	def __init__ (self, *args, **kwargs):
-		super (LoggerColorStreamHandler, self).__init__ (*args, **kwargs)
+		super (ColorStreamHandler, self).__init__ (*args, **kwargs)
 
 		self.colors = {
 			'black':	'\033[0;30m',
@@ -61,15 +61,31 @@ class LoggerColorStreamHandler (logging.StreamHandler):
 		except:
 			self.handleError (record)
 
+class IndentLoggerAdapter (logging.LoggerAdapter):
+	def __init__ (self, logger, extra):
+		super (IndentLoggerAdapter, self).__init__ (logger, extra)
+
+		self.indent = 0
+
+	def enter (self):
+		self.indent = min (self.indent + 1, 8)
+
+	def leave (self):
+		self.indent = max (self.indent - 1, 0)
+
+	def process (self, msg, kwargs):
+		return '| ' * self.indent + msg, kwargs
+
 class Logger:
 	@staticmethod
-	def build ():
+	def build (level):
 		formatter = logging.Formatter ('%(levelname)s: %(message)s')
 
-		console = LoggerColorStreamHandler ()
+		console = ColorStreamHandler ()
 		console.setFormatter (formatter)
 
 		logger = logging.getLogger ()
 		logger.addHandler (console)
+		logger.setLevel (level)
 
-		return logger
+		return IndentLoggerAdapter (logger, {})

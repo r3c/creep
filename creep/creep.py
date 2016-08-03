@@ -25,11 +25,8 @@ def main ():
 
 	args = parser.parse_args ()
 
-	logger = Logger.build ()
-	logger.setLevel (args.level)
-
 	if not deploy.execute (
-		logger,
+		Logger.build (args.level),
 		args.base,
 		args.definition,
 		args.environment,
