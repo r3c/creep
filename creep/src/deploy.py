@@ -63,13 +63,13 @@ def execute (logger, base_path, definition_path, environment_path, names, append
 
 				continue
 
-		for sub_path, sub_names in location.subsidiaries.iteritems ():
-			full_path = os.path.join (base_path, sub_path)
+		for cascade_path, cascade_names in location.cascades.iteritems ():
+			full_path = os.path.join (base_path, cascade_path)
 
-			logger.info ('Processing subsidiary path "{0}"...'.format (full_path))
+			logger.info ('Cascading to path "{0}"...'.format (full_path))
 			logger.enter ()
 
-			ok = execute (logger, full_path, definition_path, environment_path, sub_names, [], [], None, None, yes) and ok
+			ok = execute (logger, full_path, definition_path, environment_path, cascade_names, [], [], None, None, yes) and ok
 
 			logger.leave ()
 
