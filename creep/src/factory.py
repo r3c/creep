@@ -1,7 +1,8 @@
 #!/usr/bin/env python
 
+from . import path
+
 import os
-import path
 import re
 import urllib
 
@@ -9,12 +10,12 @@ def create_source (source, options, directory):
 	source = source or detect (directory)
 
 	if source == 'delta' or source == 'hash':
-		from sources.hash import HashSource
+		from .sources.hash import HashSource
 
 		return HashSource (options)
 
 	if source == 'git':
-		from sources.git import GitSource
+		from .sources.git import GitSource
 
 		return GitSource ()
 
@@ -39,12 +40,12 @@ def create_target (logger, connection, options):
 		if password is not None or port is not None or user is not None:
 			logger.warn ('Connection string for "file" scheme shouldn\'t contain any port, user or password.')
 
-		from targets.file import FileTarget
+		from .targets.file import FileTarget
 
-		return FileTarget (os.path.join (host, directory))
+		return FileTarget (directory)
 
 	if scheme == 'ftp':
-		from targets.ftp import FTPTarget
+		from .targets.ftp import FTPTarget
 
 		return FTPTarget (host, port, user, password, directory, options)
 
@@ -52,7 +53,7 @@ def create_target (logger, connection, options):
 		if password is not None:
 			logger.warn ('Connection string for "ssh" scheme shouldn\'t contain any password.')
 
-		from targets.ssh import SSHTarget
+		from .targets.ssh import SSHTarget
 
 		return SSHTarget (host, port, user, directory, options)
 

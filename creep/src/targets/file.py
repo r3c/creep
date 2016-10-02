@@ -10,6 +10,9 @@ class FileTarget:
 		self.directory = directory
 
 	def read (self, logger, relative):
+		if not os.path.isdir (self.directory):
+			return None
+
 		source = os.path.join (self.directory, relative)
 
 		if not os.path.isfile (source):

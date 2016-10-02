@@ -1,13 +1,12 @@
 #!/usr/bin/env python
 
-from action import Action
-from definition import Definition
-from environment import Environment
-from revision import Revision
+from . import factory, path
+from .action import Action
+from .definition import Definition
+from .environment import Environment
+from .revision import Revision
 
-import factory
 import os
-import path
 import shutil
 import tempfile
 
@@ -63,7 +62,7 @@ def execute (logger, base_path, definition_path, environment_path, names, append
 
 				continue
 
-		for cascade_path, cascade_names in location.cascades.iteritems ():
+		for cascade_path, cascade_names in location.cascades.items ():
 			full_path = os.path.join (base_path, cascade_path)
 
 			logger.info ('Cascading to path "{0}"...'.format (full_path))
@@ -79,7 +78,7 @@ def prompt (logger, question):
 	logger.info (question)
 
 	while True:
-		answer = raw_input ()
+		answer = input ()
 
 		if answer == 'N' or answer == 'n':
 			return False
@@ -200,7 +199,7 @@ def sync (logger, base_path, definition, location, name, append_files, remove_fi
 		# Update current revision (remote mode)
 		if rev_from != rev_to and not location.local:
 			with open (os.path.join (work_path, location.state), 'wb') as file:
-				file.write (revision.serialize ())
+				file.write (revision.serialize ().encode ('utf-8'))
 
 			actions.append (Action (location.state, Action.ADD))
 
@@ -210,7 +209,7 @@ def sync (logger, base_path, definition, location, name, append_files, remove_fi
 
 			return True
 
-		from targets.console import ConsoleTarget
+		from .targets.console import ConsoleTarget
 
 		console = ConsoleTarget ()
 		console.send (logger, work_path, actions)
@@ -227,7 +226,7 @@ def sync (logger, base_path, definition, location, name, append_files, remove_fi
 		# Update current revision (local mode)
 		if location.local:
 			with open (os.path.join (base_path, location.state), 'wb') as file:
-				file.write (revision.serialize ())
+				file.write (revision.serialize ().encode ('utf-8'))
 
 	finally:
 		shutil.rmtree (work_path)
@@ -235,3 +234,9 @@ def sync (logger, base_path, definition, location, name, append_files, remove_fi
 	logger.info ('Deployment done.')
 
 	return True
+
+# Hack for Python 2 + 3 compatibility
+try:
+	input = raw_input
+except NameError:
+	pass

@@ -7,7 +7,7 @@ class Revision:
 		states = {}	
 
 		if data != '':
-			for (name, rev) in json.loads (data).iteritems ():
+			for (name, rev) in json.loads (data).items ():
 				states[name] = rev
 
 		self.states = states

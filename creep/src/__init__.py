@@ -1,5 +1,4 @@
 #!/usr/bin/env python
 
-import deploy
-
-from logger import Logger
+from . import deploy
+from .logger import Logger

@@ -10,7 +10,7 @@ class GitSource:
 			.execute ()
 
 		if revision:
-			return revision.out.strip ()
+			return revision.out.decode ('utf-8').strip ()
 
 		return None
 
@@ -41,8 +41,8 @@ class GitSource:
 
 			return None
 
-		hash_from = res_from.out.strip ()
-		hash_to = res_to.out.strip ()
+		hash_from = res_from.out.decode ('utf-8').strip ()
+		hash_to = res_to.out.decode ('utf-8').strip ()
 
 		# Display update information
 		if hash_from != hash_to:
@@ -77,7 +77,7 @@ class GitSource:
 
 		actions = []
 
-		for line in diff.out.splitlines ():
+		for line in diff.out.decode ('utf-8').splitlines ():
 			(mode, path) = line.split ('\t', 1)
 
 			if mode == 'A' or mode == 'M':

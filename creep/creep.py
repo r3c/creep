@@ -2,7 +2,10 @@
 
 import argparse
 import logging
+import os
 import sys
+
+sys.path.append (os.path.dirname (__file__))
 
 from src import Logger, deploy
 

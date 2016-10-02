@@ -45,7 +45,7 @@ class HashSource:
 	def recurse (self, base_path, work_path, parent, entries_from, entries_to):
 		actions = []
 
-		for name in set (entries_from.keys () + entries_to.keys ()):
+		for name in set (entries_from.keys ()).union (entries_to.keys ()):
 			entry_from = entries_from.get (name, None)
 			entry_to = entries_to.get (name, None)
 			source = os.path.join (parent, name)

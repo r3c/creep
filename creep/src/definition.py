@@ -1,11 +1,12 @@
 #!/usr/bin/env python
 
+import codecs
 import json
 import os
 import re
 
-from action import Action
-from process import Process
+from .action import Action
+from .process import Process
 
 class DefinitionModifier:
 	def __init__ (self, regex, filter, rename, modify, link):
@@ -21,7 +22,8 @@ class Definition:
 
 		# Read modifiers from configuration file if available...
 		if file is not None:
-			config = json.load (file)
+			reader = codecs.getreader ('utf-8')
+			config = json.load (reader (file))
 
 			for modifier in config.get ('modifiers', []):
 				modify = modifier.get ('modify', modifier.get ('adapt', None))
