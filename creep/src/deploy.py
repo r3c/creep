@@ -119,7 +119,7 @@ def sync (logger, base_path, definition, location, name, append_files, remove_fi
 
 	try:
 		revision = Revision (data)
-	except Error as e:
+	except Exception as e:
 		logger.error ('Can\'t parse revision from file "{0}": {1}.'.format (location.state, e))
 
 		return False

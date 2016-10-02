@@ -23,17 +23,22 @@ def duplicate (source, base, target):
 
 	return True
 
+"""
+Explode path into separate components.
+path:	input path
+return:	path components
+"""
 def explode (path):
 	names = []
+	tail = '.'
 
-	while path != '' and path != '/':
+	while tail != '':
 		(path, tail) = os.path.split (path)
 
 		if tail != '':
 			names.insert (0, tail)
-
-	if path == '/':
-		names.insert (0, path)
+		elif path != '':
+			names.insert (0, path)
 
 	return names
 

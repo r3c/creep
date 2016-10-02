@@ -61,10 +61,11 @@ def create_target (logger, connection, options):
 	return None
 
 def detect (directory):
-	names = path.explode (os.path.abspath (directory))
+	drive, tail = os.path.splitdrive (os.path.abspath (directory))
+	names = path.explode (tail)
 
 	# Detect '.git' file or directory in parent folders
-	if any ((os.path.exists (os.path.join (*(names[0:n] + ['.git']))) for n in range (len (names), 0, -1))):
+	if any ((os.path.exists (drive + os.path.join (*(names[0:n] + ['.git']))) for n in range (len (names), 0, -1))):
 		return 'git'
 
 	# Fallback to hash source by default
