@@ -30,12 +30,12 @@ class FTPTarget:
 
 			ftp.set_pasv (self.options.get ('passive', True))
 		except ftplib.all_errors as e:
-			if e.message.startswith ('530 '):
-				logger.debug ('Can\'t authenticate as \'{0}\' on remote FTP: \'{1}\''.format (self.user, e.message))
-			elif e.message.startswith ('550 '):
-				logger.debug ('Can\'t access folder \'{0}\' on remote FTP: \'{1}\''.format (self.directory, e.message))
+			if e.args[0].startswith ('530 '):
+				logger.debug ('Can\'t authenticate as \'{0}\' on remote FTP: \'{1}\''.format (self.user, e))
+			elif e.args[0].startswith ('550 '):
+				logger.debug ('Can\'t access folder \'{0}\' on remote FTP: \'{1}\''.format (self.directory, e))
 			else:
-				logger.debug ('Unknown FTP error: \'{0}\''.format (e.message))
+				logger.debug ('Unknown FTP error: \'{0}\''.format (e))
 
 			ftp.quit ()
 
@@ -59,10 +59,10 @@ class FTPTarget:
 				return buffer.getvalue ()
 
 			except ftplib.all_errors as e:
-				if e.message.startswith ('550 '): # no such file or directory
+				if e.args[0].startswith ('550 '): # no such file or directory
 					return ''
 
-				logger.debug ('Can\'t read file from FTP remote: {0}'.format (e.message))
+				logger.debug ('Can\'t read file from FTP remote: {0}'.format (e))
 
 				return None
 
@@ -95,7 +95,7 @@ class FTPTarget:
 								try:
 									ftp.mkd (parent)
 								except ftplib.all_errors as e:
-									if not e.message.startswith ('550 '):
+									if not e.args[0].startswith ('550 '):
 										raise e
 
 							create = False
@@ -109,11 +109,11 @@ class FTPTarget:
 						try:
 							ftp.delete (target)
 						except ftplib.all_errors as e:
-							if not e.message.startswith ('550 '):
+							if not e.args[0].startswith ('550 '):
 								raise e
 
 		except ftplib.all_errors as e:
-			logger.debug ('Can\'t deploy to FTP remote: {0}'.format (e.message))
+			logger.debug ('Can\'t deploy to FTP remote: {0}'.format (e))
 
 			return False
 

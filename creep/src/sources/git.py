@@ -60,7 +60,7 @@ class GitSource:
 
 		if not archive:
 			logger.warning ('Couldn\'t export archive from Git.')
-			logger.debug (archive.err)
+			logger.debug (archive.err.decode('UTF-8'))
 
 			return None
 
