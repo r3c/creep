@@ -27,7 +27,7 @@ class GitSource:
 
 		if not res_from:
 			logger.warning ('Invalid source revision "{0}".'.format (rev_from))
-			logger.debug (res_from.err)
+			logger.debug (res_from.err.decode ('utf-8'))
 
 			return None
 
@@ -37,7 +37,7 @@ class GitSource:
 
 		if not res_to:
 			logger.warning ('Invalid target revision "{0}".'.format (rev_to))
-			logger.debug (res_to.err)
+			logger.debug (res_to.err.decode ('utf-8'))
 
 			return None
 
@@ -71,7 +71,7 @@ class GitSource:
 
 		if not diff:
 			logger.warning ('Couldn\'t get diff from Git.')
-			logger.debug (diff.err)
+			logger.debug (diff.err.decode ('utf-8'))
 
 			return None
 
