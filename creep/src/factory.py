@@ -1,5 +1,11 @@
 #!/usr/bin/env python
 
+# Hack for Python 2 + 3 compatibility
+try:
+    from urllib.parse import unquote_plus
+except ImportError:
+    from urllib import unquote_plus
+
 from . import path
 
 import os
@@ -31,10 +37,10 @@ def create_target (logger, connection, options):
 
 	directory = match.group (6) or '.'
 	host = match.group (4)
-	password = match.group (3) is not None and urllib.unquote_plus (match.group (3)) or match.group (3)
+	password = match.group (3) is not None and unquote_plus (match.group (3)) or match.group (3)
 	port = match.group (5) is not None and int (match.group (5)) or None
 	scheme = match.group (1)
-	user = match.group (2) is not None and urllib.unquote_plus (match.group (2)) or match.group (2)
+	user = match.group (2) is not None and unquote_plus (match.group (2)) or match.group (2)
 
 	if scheme == 'file':
 		if password is not None or port is not None or user is not None:
