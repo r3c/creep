@@ -11,14 +11,20 @@ class FileTarget:
 
 	def read (self, logger, relative):
 		if not os.path.isdir (self.directory):
+			logger.debug ('Directory "{0}" doesn\'t exist'.format (self.directory))
+
 			return None
 
 		source = os.path.join (self.directory, relative)
 
 		if not os.path.isfile (source):
+			logger.debug ('Revision file "{0}" doesn\'t exist'.format (source))
+
 			return ''
 
 		if not os.access (source, os.R_OK):
+			logger.debug ('Revision file "{0}" cannot be read'.format (source))
+
 			return None
 
 		with open (source, 'rb') as file:

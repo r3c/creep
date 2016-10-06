@@ -12,8 +12,8 @@ import os
 import re
 import urllib
 
-def create_source (source, options, directory):
-	source = source or detect (directory)
+def create_source (source, options, base_path):
+	source = source or detect (base_path)
 
 	if source == 'delta' or source == 'hash':
 		from .sources.hash import HashSource
@@ -28,7 +28,7 @@ def create_source (source, options, directory):
 	# No known source type recognized
 	return None
 
-def create_target (logger, connection, options):
+def create_target (logger, connection, options, base_path):
 	# FIXME: should use urllib.parse [url-parse]
 	match = re.match ('([+0-9A-Za-z]+)://(?:([^#/:@]+)(?::([^#/@]+))?@)?(?:([^#/:]+)(?::([0-9]+))?)?(?:/([^#]*))?', connection)
 
@@ -48,7 +48,7 @@ def create_target (logger, connection, options):
 
 		from .targets.file import FileTarget
 
-		return FileTarget (directory)
+		return FileTarget (os.path.join (base_path, directory))
 
 	if scheme == 'ftp':
 		from .targets.ftp import FTPTarget

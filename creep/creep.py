@@ -7,7 +7,7 @@ import sys
 
 sys.path.append (os.path.dirname (__file__))
 
-from src import Logger, deploy
+from src import Deployer, Logger
 
 def main ():
 	# Parse command line options
@@ -27,18 +27,15 @@ def main ():
 	parser.add_argument ('-y', '--yes', action = 'store_true', help = 'Always answer yes to prompts')
 
 	args = parser.parse_args ()
+	deployer = Deployer (Logger.build (args.level), args.definition, args.environment, args.yes)
 
-	if not deploy.execute (
-		Logger.build (args.level),
+	if not deployer.deploy (
 		args.base,
-		args.definition,
-		args.environment,
 		args.name,
 		args.append + args.extra_append,
 		args.remove + args.extra_append,
 		args.rev_from,
-		args.rev_to,
-		args.yes):
+		args.rev_to):
 		return 1
 
 	return 0
