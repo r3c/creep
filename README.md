@@ -1,6 +1,8 @@
 Creep README file
 =================
 
+[![Build Status](https://travis-ci.org/r3c/creep.svg?branch=master)](https://travis-ci.org/r3c/creep)
+
 Overview
 --------
 
