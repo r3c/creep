@@ -31,11 +31,11 @@ class FTPTarget:
 			ftp.set_pasv (self.options.get ('passive', True))
 		except ftplib.all_errors as e:
 			if e.args[0].startswith ('530 '):
-				logger.debug ('Can\'t authenticate as \'{0}\' on remote FTP: \'{1}\''.format (self.user, e))
+				logger.warning ('Can\'t authenticate as \'{0}\' on remote FTP: \'{1}\''.format (self.user, e))
 			elif e.args[0].startswith ('550 '):
-				logger.debug ('Can\'t access folder \'{0}\' on remote FTP: \'{1}\''.format (self.directory, e))
+				logger.warning ('Can\'t access folder \'{0}\' on remote FTP: \'{1}\''.format (self.directory, e))
 			else:
-				logger.debug ('Unknown FTP error: \'{0}\''.format (e))
+				logger.warning ('Unknown FTP error: \'{0}\''.format (e))
 
 			ftp.quit ()
 
@@ -62,7 +62,7 @@ class FTPTarget:
 				if e.args[0].startswith ('550 '): # no such file or directory
 					return ''
 
-				logger.debug ('Can\'t read file from FTP remote: {0}'.format (e))
+				logger.warning ('Can\'t read file \'{0}\' from FTP remote: {1}'.format (relative, e))
 
 				return None
 
@@ -113,7 +113,7 @@ class FTPTarget:
 								raise e
 
 		except ftplib.all_errors as e:
-			logger.debug ('Can\'t deploy to FTP remote: {0}'.format (e))
+			logger.warning ('Can\'t deploy to FTP remote: {0}'.format (e))
 
 			return False
 

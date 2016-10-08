@@ -11,7 +11,7 @@ class FileTarget:
 
 	def read (self, logger, relative):
 		if not os.path.isdir (self.directory):
-			logger.debug ('Directory "{0}" doesn\'t exist'.format (self.directory))
+			logger.warning ('Directory "{0}" doesn\'t exist'.format (self.directory))
 
 			return None
 
@@ -23,7 +23,7 @@ class FileTarget:
 			return ''
 
 		if not os.access (source, os.R_OK):
-			logger.debug ('Revision file "{0}" cannot be read'.format (source))
+			logger.warning ('Revision file "{0}" cannot be read'.format (source))
 
 			return None
 

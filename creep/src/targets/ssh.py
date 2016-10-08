@@ -22,7 +22,8 @@ class SSHTarget:
 		result = Process (self.tunnel + [command]).execute ()
 
 		if not result:
-			logger.debug (result.err)
+			logger.warning ('Couldn\'t read file \'{0}\' from SSH target.'.format (relative))
+			logger.debug (result.err.decode ('utf-8'))
 
 			return None
 
@@ -51,7 +52,7 @@ class SSHTarget:
 
 				if not result:
 					logger.warning ('Couldn\'t push files to SSH target.')
-					logger.debug (result.err)
+					logger.debug (result.err.decode ('utf-8'))
 
 					return False
 
@@ -60,7 +61,7 @@ class SSHTarget:
 				
 				if not result:
 					logger.warning ('Couldn\'t delete files from SSH target.')
-					logger.debug (result.err)
+					logger.debug (result.err.decode ('utf-8'))
 
 					return False
 
