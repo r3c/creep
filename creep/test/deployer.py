@@ -27,11 +27,11 @@ class DeployerTester (unittest.TestCase):
 		finally:
 			shutil.rmtree (directory)
 
-	def step_configure (self, source, environment):
+	def step_create_environment (self, source, environment):
 		with open (os.path.join (source, '.creep.env'), 'wb') as file:
 			file.write (environment)
 
-	def step_deploy (self, source, files):
+	def step_deploy (self, source, locations, files, definition = '.creep.def', environment = '.creep.env'):
 		for relative, data in files.items ():
 			directory = os.path.join (source, os.path.dirname (relative))
 
@@ -41,27 +41,43 @@ class DeployerTester (unittest.TestCase):
 			with open (os.path.join (source, relative), 'wb') as file:
 				file.write (data)
 
-		deployer = Deployer (Logger.build (logging.CRITICAL), '.creep.def', '.creep.env', True)
+		deployer = Deployer (Logger.build (logging.CRITICAL), definition, environment, True)
 
-		self.assertTrue (deployer.deploy (source, ['default'], [], [], None, None))
+		self.assertTrue (deployer.deploy (source, locations, [], [], None, None))
 
 	def step_expect (self, target, files):
 		for relative, expected in files.items ():
 			path = os.path.join (target, relative)
 
-			self.assertTrue (os.path.exists (path))
+			self.assertEqual (os.path.exists (path), expected is not None)
 
-			with open (path, 'rb') as file:
-				data = file.read ()
+			if expected is not None:
+				with open (path, 'rb') as file:
+					data = file.read ()
 
-			self.assertEqual (data, expected)
+				self.assertEqual (data, expected)
+
+	def test_config_inline_definition (self):
+		self.execute ([
+			lambda s, t: self.step_create_environment (s, b'{"default": {"connection": "file:///../target"}}'),
+			lambda s, t: self.step_deploy (s, ['default'], {'aaa': b'a', 'bbb': b'b'}, '{"modifiers": [{"pattern": "^bbb$", "filter": ""}]}'),
+			lambda s, t: self.step_expect (t, {'aaa': b'a', 'bbb': None})
+		])
+
+	def test_config_inline_environment (self):
+		files = {'aaa': b'a'}
+
+		self.execute ([
+			lambda s, t: self.step_deploy (s, ['default'], files, '.creep.def', '{"default": {"connection": "file:///../target"}}'),
+			lambda s, t: self.step_expect (t, files)
+		])
 
 	def test_file_basic_many (self):
 		files = {'aaa': b'a', 'b/bb': b'b', 'c/c/c': b'c'}
 
 		self.execute ([
-			lambda s, t: self.step_configure (s, b'{"default":{"connection": "file:///../target"}}'),
-			lambda s, t: self.step_deploy (s, files),
+			lambda s, t: self.step_create_environment (s, b'{"default": {"connection": "file:///../target"}}'),
+			lambda s, t: self.step_deploy (s, ['default'], files),
 			lambda s, t: self.step_expect (t, files)
 		])
 
@@ -69,8 +85,8 @@ class DeployerTester (unittest.TestCase):
 		files = {'test': b'Hello, World!'}
 
 		self.execute ([
-			lambda s, t: self.step_configure (s, b'{"default":{"connection": "file:///../target"}}'),
-			lambda s, t: self.step_deploy (s, files),
+			lambda s, t: self.step_create_environment (s, b'{"default": {"connection": "file:///../target"}}'),
+			lambda s, t: self.step_deploy (s, ['default'], files),
 			lambda s, t: self.step_expect (t, files)
 		])
 

@@ -174,6 +174,11 @@ Note that environment files only describe information about external locations
 and may contain passwords. For those reasons they should be excluded from your
 versionning and kept only on machines performing deployments.
 
+If you prefer not to write environment configuration as files, you can also
+pass it as a JSON string using `-e` command line option:
+
+	creep -e '{"default": {"connection": "ftp://me:password@host"}}'
+
 Definition file
 ---------------
 
@@ -293,6 +298,11 @@ listed below:
 Creep always appends two modifiers to filter to exclude environment and
 definition files from deployments. You shouldn't need to change this behavior,
 but you may do so by adding explicit modifiers matching them.
+
+Like for environment configuration you can also specify definition
+configuration as a JSON string instead of file using `-d` command line option:
+
+	creep -d '{"source": "hash"}'
 
 Troubleshooting
 ---------------

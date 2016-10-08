@@ -1,6 +1,5 @@
 #!/usr/bin/env python
 
-import codecs
 import json
 
 class EnvironmentLocation:
@@ -14,15 +13,10 @@ class EnvironmentLocation:
 		self.state = location.get ('state', '.creep.rev')
 
 class Environment:
-	def __init__ (self, file):
-		# Load environments configuration from file
-		try:
-			reader = codecs.getreader ('utf-8')
-			config = json.load (reader (file))
+	def __init__ (self, data):
+		config = json.loads (data)
 
-		except KeyError as key:
-			raise ValueError ('missing property "{0}" in environments file'.format (key))
-
+		# Read locations from JSON configuration
 		self.locations = dict (((name, EnvironmentLocation (location)) for (name, location) in config.items ()))
 
 	def get_location (self, name):

@@ -1,6 +1,5 @@
 #!/usr/bin/env python
 
-import codecs
 import json
 import os
 import re
@@ -17,36 +16,26 @@ class DefinitionModifier:
 		self.rename = rename
 
 class Definition:
-	def __init__ (self, file, ignores):
+	def __init__ (self, data, ignores):
+		config = json.loads (data)
 		modifiers = []
 
-		# Read modifiers from configuration file if available...
-		if file is not None:
-			reader = codecs.getreader ('utf-8')
-			config = json.load (reader (file))
+		# Read modifiers from JSON configuration
+		for modifier in config.get ('modifiers', []):
+			modify = modifier.get ('modify', modifier.get ('adapt', None))
+			filter = modifier.get ('filter', None)
+			link = modifier.get ('link', None)
+			rename = modifier.get ('rename', modifier.get ('name', None))
 
-			for modifier in config.get ('modifiers', []):
-				modify = modifier.get ('modify', modifier.get ('adapt', None))
-				filter = modifier.get ('filter', None)
-				link = modifier.get ('link', None)
-				rename = modifier.get ('rename', modifier.get ('name', None))
+			modifiers.append (DefinitionModifier (re.compile (modifier['pattern']), filter, rename, modify, link))
 
-				modifiers.append (DefinitionModifier (re.compile (modifier['pattern']), filter, rename, modify, link))
-
-			options = config.get ('options', {})
-			source = config.get ('source', None)
-
-		# ...or provide default set of modifiers otherwise
-		else:
-			options = {}
-			source = None
-
+		# Append ignores specified in arguments
 		for ignore in ignores:
 			modifiers.append (DefinitionModifier (re.compile ('^' + re.escape (ignore) + '$'), '', None, None, None))
 
 		self.modifiers = modifiers
-		self.options = options
-		self.source = source
+		self.options = config.get ('options', {})
+		self.source = config.get ('source', None)
 
 	def apply (self, logger, work, path, type, used):
 		# Ensure we don't process a file already scanned

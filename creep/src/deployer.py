@@ -6,15 +6,16 @@ from .definition import Definition
 from .environment import Environment
 from .revision import Revision
 
+import codecs
 import os
 import shutil
 import tempfile
 
 class Deployer:
-	def __init__ (self, logger, definition_path, environment_path, yes):
+	def __init__ (self, logger, definition, environment, yes):
+		self.definition = definition
+		self.environment = environment
 		self.logger = logger
-		self.definition_path = definition_path
-		self.environment_path = environment_path
 		self.yes = yes
 
 	def deploy (self, base_path, names, append_files, remove_files, rev_from, rev_to):
@@ -24,25 +25,47 @@ class Deployer:
 
 			return False
 
-		# Load environment file or fail
-		full_path = os.path.join (base_path, self.environment_path)
+		# Load environment configuration from command line argument or file
+		ignores = []
 
-		if os.path.isfile (full_path):
-			with open (full_path, 'rb') as file:
-				environment = Environment (file)
+		if self.environment[0:1] == '{':
+			environment_json = self.environment
 		else:
-			self.logger.error ('No environment file "{0}" found.'.format (full_path))
+			environment_name = self.environment[0:1] == '@' and self.environment[1:] or self.environment
+			environment_path = os.path.join (base_path, environment_name)
 
-			return False
+			if os.path.isfile (environment_path):
+				reader = codecs.getreader ('utf-8')
 
-		# Load definition file or use default
-		full_path = os.path.join (base_path, self.definition_path)
+				with open (environment_path, 'rb') as file:
+					environment_json = reader (file).read ()
+			else:
+				self.logger.warning ('Environment file "{0}" doesn\'t exist.'.format (environment_path))
 
-		if os.path.isfile (full_path):
-			with open (full_path, 'rb') as file:
-				definition = Definition (file, [self.environment_path, self.definition_path])
+				return False
+
+			ignores.append (environment_name)
+
+		environment = Environment (environment_json)
+
+		# Read definition configuration from command line argument or file
+		if self.definition[0:1] == '{':
+			definition_json = self.definition
 		else:
-			definition = Definition (None, [self.environment_path, self.definition_path])
+			definition_name = self.definition[0:1] == '@' and self.definition[1:] or self.definition
+			definition_path = os.path.join (base_path, definition_name)
+
+			if os.path.isfile (definition_path):
+				reader = codecs.getreader ('utf-8')
+
+				with open (definition_path, 'rb') as file:
+					definition_json = reader (file).read ()
+			else:
+				definition_json = '{}'
+
+			ignores.append (definition_name)
+
+		definition = Definition (definition_json, ignores)
 
 		# Expand location names
 		if len (names) < 1:
