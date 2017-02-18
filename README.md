@@ -43,37 +43,40 @@ Quick start
 -----------
 
 First go to the directory you want to deploy, e.g. the `src` folder of some
-project. It can be inside a Git repository or just a regular folder, Creep will
-select a suitable default configuration either way. Create a new `.creep.env`
-file inside this directory with following JSON content:
+project. It can be inside a Git repository or just be a regular folder, Creep
+will select a suitable default configuration either way. Create a new
+`.creep.env` file inside this directory with following JSON content:
 
+    $ cd path/to/your/project
+    $ cat > .creep.env << EOF
 	{
 		"default": {
 			"connection": "file:////tmp/creep-quickstart"
 		}
 	}
+    EOF
 
-Mind the quadruple slash in `file:////tmp/creep-quickstart` string. Once file is
+Mind the quadruple slash in `file:////tmp/creep-quickstart` value. Once file is
 saved, create the directory and execute creep with no parameter:
 
 	$ mkdir /tmp/creep-quickstart
 	$ creep
 
 Creep will tell you about deploying this project for the first time and ask you
-to confirm. Enter `Y` to continue. It will display the full list of files in
+to confirm. Answer `y` to continue. It will display the full list of files in
 your project (by scanning file system or Git history) then ask you again to
-confirm. Enter `Y` and Creep will deploy your project to directory
+confirm. Enter `y` and Creep will deploy your project to directory
 `/tmp/creep-quickstart`.
 
 Now if you try to execute creep again you'll see a message saying no action is
 required. Deployment location now contains an up-to-date version of your project
-and Creep saved this information. Try to change some file (and `git commit` them
-if you were using Git) then execute the command again. This time Creep will send
-only the file you changed rather than the full project.
+and Creep saved this information. Try to change some files (and `git commit`
+them if you were using Git) then execute the command again. This time Creep will
+send only the file you changed rather than the full project.
 
 This basic example shows how to incrementally deploy a project to some local
 directory. Next sections will show how to deploy to remote locations (FTP or
-SSH) and register several locations.
+SSH) and register several deployment configurations.
 
 Environment file
 ----------------
@@ -103,15 +106,17 @@ Environment configuration file uses JSON format and looks like this:
 		}
 	}
 
-Elements in the root object specifies an available deployment location. Each one
-must contain at least a `connection` string specifying protocol, address,
+Elements in the root object specify an available deployment location. Each one
+must have at least a `connection` string containing protocol, address,
 credentials and/or path. Read details below for more information about supported
 protocols.
 
 Once environment configuration file is ready you can start using Creep. Just
 type `creep <name>` where `<name>` is name of a configured location. You can
-also specify multiple locations, or use `*` to deploy everywhere. If you don't
-specify any name Creep will deploy to `default` location.
+also specify multiple locations (`creep <name1> <name2> ...`) or use `*` to
+deploy everywhere (`creep '*'`, don't forget to escape the `*` if you're running
+Creep from within a shell). If you don't specify any name Creep will deploy to
+`default` location.
 
 Creep will then fetch last deployed revision from remote location and compute
 difference. When you deploy for the first time there is no last deployed
@@ -168,7 +173,7 @@ and available options:
     in example above.
 
 Path is relative by default in all protocols. Start your path by a slash `/`
-character to specify an absolute path, e.g. `file:////var/opt/myproject`.
+character to specify an absolute path, e.g. `file:////opt/myproject`.
 
 Note that environment files only describe information about external locations
 and may contain passwords. For those reasons they should be excluded from your
@@ -183,10 +188,11 @@ Definition file
 ---------------
 
 Creep supports another configuration file, called _definition_ file. It's used
-to define how to detect changes what preprocessing operations to apply on files
-upon transfer. Name this file `.creep.def` and put it in the same directories
-your environment files are. As opposed to environment files this one is bound to
-your project and should be shared along with other project files.
+to define how to detect changes in files and what preprocessing operations
+should be applied on files upon transfer. Create a new `.creep.def` file and put
+it in the same directories your environment files are. As opposed to environment
+files this one is bound to your project and should be shared along with other
+project files.
 
 Definition configuration file uses JSON format and looks like this:
 
