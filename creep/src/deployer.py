@@ -105,6 +105,9 @@ class Deployer:
 		return ok
 
 	def prompt (self, question):
+		if self.yes:
+			return True
+
 		self.logger.info (question)
 
 		while True:
@@ -158,7 +161,7 @@ class Deployer:
 		if rev_from is None:
 			rev_from = revision.get (name)
 
-			if rev_from is None and not self.yes and not self.prompt ('No current revision found, maybe you\'re deploying for the first time. Initiate full deploy? [Y/N]'):
+			if rev_from is None and not self.prompt ('No current revision found, maybe you\'re deploying for the first time. Initiate full deploy? [Y/N]'):
 				return True
 
 		if rev_to is None:
@@ -244,7 +247,7 @@ class Deployer:
 			console = ConsoleTarget ()
 			console.send (self.logger, work_path, actions)
 
-			if not self.yes and not self.prompt ('Deploy? [Y/N]'):
+			if not self.prompt ('Deploy? [Y/N]'):
 				return True
 
 			# Execute processed actions after ordering them by precedence
