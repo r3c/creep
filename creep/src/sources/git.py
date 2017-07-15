@@ -84,5 +84,10 @@ class GitSource:
 				actions.append (Action (path, Action.ADD))
 			elif mode == 'D':
 				actions.append (Action (path, Action.DEL))
+			elif mode.startswith ('R'):
+				(path_del, path_add) = path.split ('\t', 1)
+
+				actions.append (Action (path_add, Action.ADD))
+				actions.append (Action (path_del, Action.DEL))
 
 		return actions
