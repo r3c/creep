@@ -19,7 +19,7 @@ def main ():
 	parser.add_argument ('-e', '--environment', default = '.creep.env', help = 'Read environment configuration from specified file or JSON string', metavar = 'FILE/JSON')
 	parser.add_argument ('-f', '--rev-from', help = 'Initial version used to compute diff', metavar = 'REV')
 	parser.add_argument ('-d', '--definition', default = '.creep.def', help = 'Read definition configuration from specified file or JSON string', metavar = 'FILE/JSON')
-	parser.add_argument ('-q', '--quiet', dest = 'level', action = 'store_const', const = logging.CRITICAL + 1, default = logging.INFO, help = 'Quiet mode, don\'t display anything but errors')
+	parser.add_argument ('-q', '--quiet', dest = 'level', action = 'store_const', const = logging.WARNING, default = logging.INFO, help = 'Quiet mode, don\'t display anything but errors')
 	parser.add_argument ('-r', '--remove', action = 'append', default = [], help = 'Manually remove file or directory from locations', metavar = 'PATH')
 	parser.add_argument ('--extra-remove', action = 'append', default = [], help = argparse.SUPPRESS)
 	parser.add_argument ('-t', '--rev-to', help = 'Target version used to compute diff', metavar = 'REV')
