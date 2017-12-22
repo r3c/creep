@@ -82,7 +82,9 @@ class Definition:
 							actions.extend (actions_append)
 							cancels.extend (cancels_append)
 					else:
-						logger.debug ('Command \'link\' on file \'{0}\' returned non-zero code.'.format (path))
+						logger.warning ('Command \'link\' on file \'{0}\' returned non-zero code.'.format (path))
+
+						type = Action.ERR
 
 				# Build output file using processing command if any
 				if modifier.modify is not None:
@@ -92,7 +94,7 @@ class Definition:
 						with open (os.path.join (work, path_new), 'wb') as file:
 							file.write (out)
 					else:
-						logger.debug ('Command \'modify\' on file \'{0}\' returned non-zero code.'.format (path))
+						logger.warning ('Command \'modify\' on file \'{0}\' returned non-zero code.'.format (path))
 
 						type = Action.ERR
 
