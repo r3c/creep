@@ -161,7 +161,7 @@ class Deployer:
 		if rev_from is None:
 			rev_from = revision.get (name)
 
-			if rev_from is None and not self.prompt ('No current revision found, maybe you\'re deploying for the first time. Initiate full deploy? [Y/N]'):
+			if rev_from is None and not self.prompt ('No current revision found, are you deploying for the first time? [Y/N]'):
 				return True
 
 		if rev_to is None:
