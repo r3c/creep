@@ -42,7 +42,7 @@ class Definition:
 		path = os.path.normpath (path)
 
 		if path in used:
-			return ([], [])
+			return []
 
 		used.add (path)
 
@@ -58,15 +58,18 @@ class Definition:
 			logger.debug ('File \'{0}\' matches \'{1}\'.'.format (path, modifier.regex.pattern))
 
 			actions = []
-			cancels = []
 
 			# Apply renaming pattern if any
 			if modifier.rename is not None:
+				previous_path = path
+
 				name = os.path.basename (re.sub ('\\\\([0-9]+)', lambda m: match.group (int (m.group (1))), modifier.rename))
+				path = os.path.normpath (os.path.join (os.path.dirname (path), name))
+
+				if type == Action.ADD:
+					os.rename (os.path.join (work, previous_path), os.path.join (work, path))
 
 				logger.debug ('File \'{0}\' renamed to \'{1}\'.'.format (path, name))
-
-			path_new = os.path.normpath (os.path.join (os.path.dirname (path), name))
 
 			if type == Action.ADD:
 				# Apply link command if any
@@ -77,10 +80,7 @@ class Definition:
 						for link in out.splitlines ():
 							logger.debug ('File \'{0}\' is linked to file \'{1}\'.'.format (path, link))
 
-							(actions_append, cancels_append) = self.apply (logger, work, link, type, used)
-
-							actions.extend (actions_append)
-							cancels.extend (cancels_append)
+							actions.extend (self.apply (logger, work, link, type, used))
 					else:
 						logger.warning ('Command \'link\' on file \'{0}\' returned non-zero code.'.format (path))
 
@@ -91,21 +91,12 @@ class Definition:
 					out = self.run (work, path, modifier.modify)
 
 					if out is not None:
-						with open (os.path.join (work, path_new), 'wb') as file:
+						with open (os.path.join (work, path), 'wb') as file:
 							file.write (out)
 					else:
 						logger.warning ('Command \'modify\' on file \'{0}\' returned non-zero code.'.format (path))
 
 						type = Action.ERR
-
-					if path != path_new:
-						cancels.append (path)
-
-				# Otherwise, copy original to renamed
-				elif path != path_new:
-					shutil.copy (os.path.join (work, path), os.path.join (work, path_new))
-
-					cancels.append (path)
 
 			# Apply filtering command if any
 			if modifier.filter is not None and (modifier.filter == '' or self.run (work, path, modifier.filter) is None):
@@ -114,12 +105,12 @@ class Definition:
 				type = Action.NOP
 
 			# Append action to list and return
-			actions.append (Action (path_new, type))
+			actions.append (Action (path, type))
 
-			return (actions, cancels)
+			return actions
 
 		# No modifier matched, return unmodified input
-		return ([Action (path, type)], [])
+		return [Action (path, type)]
 
 	def run (self, work, path, command):
 		result = Process (command.replace ('{}', path)) \

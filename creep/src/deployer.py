@@ -217,17 +217,10 @@ class Deployer:
 
 			# Apply pre-processing modifiers on actions
 			actions = []
-			cancels = []
 			used = set ()
 
 			for command in source_actions + manual_actions:
-				(actions_append, cancels_append) = definition.apply (self.logger, work_path, command.path, command.type, used)
-
-				actions.extend (actions_append)
-				cancels.extend (cancels_append)
-
-			for cancel in cancels:
-				path.remove (work_path, cancel)
+				actions.extend (definition.apply (self.logger, work_path, command.path, command.type, used))
 
 			# Update current revision (remote mode)
 			if rev_from != rev_to and not location.local:
