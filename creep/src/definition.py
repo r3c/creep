@@ -77,7 +77,7 @@ class Definition:
 					out = self.run (work, path, modifier.link)
 
 					if out is not None:
-						for link in out.splitlines ():
+						for link in out.decode ('utf-8').splitlines ():
 							logger.debug ('File \'{0}\' is linked to file \'{1}\'.'.format (path, link))
 
 							actions.extend (self.apply (logger, work, link, type, used))
