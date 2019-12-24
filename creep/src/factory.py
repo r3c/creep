@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/python3
 
 # Hack for Python 2 + 3 compatibility
 try:

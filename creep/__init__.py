@@ -1,3 +1,3 @@
-#!/usr/bin/env python
+#!/usr/bin/python3
 
 __version__ = '0.3.4'
