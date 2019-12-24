@@ -4,9 +4,9 @@ import json
 
 class Revision:
 	def __init__ (self, data):
-		states = {}	
+		states = {}
 
-		if data != '':
+		if len (data) > 0:
 			for (name, rev) in json.loads (data.decode ('utf-8')).items ():
 				states[name] = rev
 
