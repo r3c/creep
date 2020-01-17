@@ -7,149 +7,151 @@ import sys
 import tempfile
 import unittest
 
-sys.path.append (os.path.dirname (os.path.dirname (__file__)))
+sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 
 from src import Deployer, Logger
 
-class DeployerTester (unittest.TestCase):
-	def execute (self, steps):
-		directory = tempfile.mkdtemp ()
 
-		try:
-			source = os.path.join (directory, 'source')
-			target = os.path.join (directory, 'target')
+class DeployerTester(unittest.TestCase):
+    def execute(self, steps):
+        directory = tempfile.mkdtemp()
 
-			os.makedirs (source)
-			os.makedirs (target)
+        try:
+            source = os.path.join(directory, 'source')
+            target = os.path.join(directory, 'target')
 
-			for step in steps:
-				step (source, target)
-		finally:
-			shutil.rmtree (directory)
+            os.makedirs(source)
+            os.makedirs(target)
 
-	def step_create (self, source, files):
-		for relative, data in files.items ():
-			directory = os.path.join (source, os.path.dirname (relative))
+            for step in steps:
+                step(source, target)
+        finally:
+            shutil.rmtree(directory)
 
-			if not os.path.exists (directory):
-				os.makedirs (directory)
+    def step_create(self, source, files):
+        for relative, data in files.items():
+            directory = os.path.join(source, os.path.dirname(relative))
 
-			with open (os.path.join (source, relative), 'wb') as file:
-				file.write (data)
+            if not os.path.exists(directory):
+                os.makedirs(directory)
 
-	def step_deploy (self, source, locations, definition = '.creep.def', environment = '.creep.env'):
-		deployer = Deployer (Logger.build (logging.CRITICAL), definition, environment, True)
+            with open(os.path.join(source, relative), 'wb') as file:
+                file.write(data)
 
-		self.assertTrue (deployer.deploy (source, locations, [], [], None, None))
+    def step_deploy(self, source, locations, definition='.creep.def', environment='.creep.env'):
+        deployer = Deployer(Logger.build(logging.CRITICAL), definition, environment, True)
 
-	def step_expect (self, target, files):
-		for relative, expected in files.items ():
-			path = os.path.join (target, relative)
+        self.assertTrue(deployer.deploy(source, locations, [], [], None, None))
 
-			self.assertEqual (os.path.exists (path), expected is not None)
+    def step_expect(self, target, files):
+        for relative, expected in files.items():
+            path = os.path.join(target, relative)
 
-			if expected is not None:
-				with open (path, 'rb') as file:
-					data = file.read ()
+            self.assertEqual(os.path.exists(path), expected is not None)
 
-				self.assertEqual (data, expected)
+            if expected is not None:
+                with open(path, 'rb') as file:
+                    data = file.read()
 
-	def step_set_definition (self, source, definition, path = '.creep.def'):
-		with open (os.path.join (source, path), 'wb') as file:
-			file.write (definition)
+                self.assertEqual(data, expected)
 
-	def step_set_environment (self, source, environment, path = '.creep.env'):
-		with open (os.path.join (source, path), 'wb') as file:
-			file.write (environment)
+    def step_set_definition(self, source, definition, path='.creep.def'):
+        with open(os.path.join(source, path), 'wb') as file:
+            file.write(definition)
 
-	def test_config_definition_file (self):
-		self.execute ([
-			lambda s, t: self.step_set_environment (s, b'{"default": {"connection": "file:///../target"}}'),
-			lambda s, t: self.step_set_definition (s, b'{"modifiers": [{"pattern": "^bbb$", "filter": ""}]}'),
-			lambda s, t: self.step_create (s, {'aaa': b'a', 'bbb': b'b'}),
-			lambda s, t: self.step_deploy (s, ['default']),
-			lambda s, t: self.step_expect (t, {'aaa': b'a', 'bbb': None})
-		])
+    def step_set_environment(self, source, environment, path='.creep.env'):
+        with open(os.path.join(source, path), 'wb') as file:
+            file.write(environment)
 
-	def test_config_definition_inline (self):
-		self.execute ([
-			lambda s, t: self.step_set_environment (s, b'{"default": {"connection": "file:///../target"}}'),
-			lambda s, t: self.step_create (s, {'aaa': b'a', 'bbb': b'b'}),
-			lambda s, t: self.step_deploy (s, ['default'], '{"modifiers": [{"pattern": "^bbb$", "filter": ""}]}'),
-			lambda s, t: self.step_expect (t, {'aaa': b'a', 'bbb': None})
-		])
+    def test_config_definition_file(self):
+        self.execute([
+            lambda s, t: self.step_set_environment(s, b'{"default": {"connection": "file:///../target"}}'),
+            lambda s, t: self.step_set_definition(s, b'{"modifiers": [{"pattern": "^bbb$", "filter": ""}]}'),
+            lambda s, t: self.step_create(s, {
+                'aaa': b'a',
+                'bbb': b'b'
+            }), lambda s, t: self.step_deploy(s, ['default']),
+            lambda s, t: self.step_expect(t, {
+                'aaa': b'a',
+                'bbb': None
+            })
+        ])
 
-	def test_config_environment_file (self):
-		files = {'aaa': b'a'}
+    def test_config_definition_inline(self):
+        self.execute([
+            lambda s, t: self.step_set_environment(s, b'{"default": {"connection": "file:///../target"}}'),
+            lambda s, t: self.step_create(s, {
+                'aaa': b'a',
+                'bbb': b'b'
+            }), lambda s, t: self.step_deploy(s, ['default'], '{"modifiers": [{"pattern": "^bbb$", "filter": ""}]}'),
+            lambda s, t: self.step_expect(t, {
+                'aaa': b'a',
+                'bbb': None
+            })
+        ])
 
-		self.execute ([
-			lambda s, t: self.step_set_environment (s, b'{"default": {"connection": "file:///../target"}}'),
-			lambda s, t: self.step_create (s, files),
-			lambda s, t: self.step_deploy (s, ['default']),
-			lambda s, t: self.step_expect (t, files)
-		])
+    def test_config_environment_file(self):
+        files = {'aaa': b'a'}
 
-	def test_config_environment_inline (self):
-		files = {'aaa': b'a'}
+        self.execute([
+            lambda s, t: self.step_set_environment(s, b'{"default": {"connection": "file:///../target"}}'),
+            lambda s, t: self.step_create(s, files), lambda s, t: self.step_deploy(s, ['default']),
+            lambda s, t: self.step_expect(t, files)
+        ])
 
-		self.execute ([
-			lambda s, t: self.step_create (s, files),
-			lambda s, t: self.step_deploy (s, ['default'], '.creep.def', '{"default": {"connection": "file:///../target"}}'),
-			lambda s, t: self.step_expect (t, files)
-		])
+    def test_config_environment_inline(self):
+        files = {'aaa': b'a'}
 
-	def test_file_basic_many (self):
-		files = {'aaa': b'a', 'b/bb': b'b', 'c/c/c': b'c'}
+        self.execute([
+            lambda s, t: self.step_create(s, files), lambda s, t: self.step_deploy(
+                s, ['default'], '.creep.def', '{"default": {"connection": "file:///../target"}}'),
+            lambda s, t: self.step_expect(t, files)
+        ])
 
-		self.execute ([
-			lambda s, t: self.step_set_environment (s, b'{"default": {"connection": "file:///../target"}}'),
-			lambda s, t: self.step_create (s, files),
-			lambda s, t: self.step_deploy (s, ['default']),
-			lambda s, t: self.step_expect (t, files)
-		])
+    def test_file_basic_many(self):
+        files = {'aaa': b'a', 'b/bb': b'b', 'c/c/c': b'c'}
 
-	def test_file_basic_one (self):
-		files = {'test': b'Hello, World!'}
+        self.execute([
+            lambda s, t: self.step_set_environment(s, b'{"default": {"connection": "file:///../target"}}'),
+            lambda s, t: self.step_create(s, files), lambda s, t: self.step_deploy(s, ['default']),
+            lambda s, t: self.step_expect(t, files)
+        ])
 
-		self.execute ([
-			lambda s, t: self.step_set_environment (s, b'{"default": {"connection": "file:///../target"}}'),
-			lambda s, t: self.step_create (s, files),
-			lambda s, t: self.step_deploy (s, ['default']),
-			lambda s, t: self.step_expect (t, files)
-		])
+    def test_file_basic_one(self):
+        files = {'test': b'Hello, World!'}
 
-	def test_file_multi_replace (self):
-		a1 = {'a/a': b'a'}
-		a2 = {'a/a': b'aaa'}
+        self.execute([
+            lambda s, t: self.step_set_environment(s, b'{"default": {"connection": "file:///../target"}}'),
+            lambda s, t: self.step_create(s, files), lambda s, t: self.step_deploy(s, ['default']),
+            lambda s, t: self.step_expect(t, files)
+        ])
 
-		self.execute ([
-			lambda s, t: self.step_set_environment (s, b'{"default": {"connection": "file:///../target"}}'),
-			lambda s, t: self.step_create (s, a1),
-			lambda s, t: self.step_deploy (s, ['default']),
-			lambda s, t: self.step_expect (t, a1),
-			lambda s, t: self.step_create (s, a2),
-			lambda s, t: self.step_deploy (s, ['default']),
-			lambda s, t: self.step_expect (t, a2)
-		])
+    def test_file_multi_replace(self):
+        a1 = {'a/a': b'a'}
+        a2 = {'a/a': b'aaa'}
 
-	def test_file_multi_update (self):
-		a = {'a/a': b'a'}
-		b = {'b/b': b'b'}
-		c = a.copy ()
-		c.update (b)
+        self.execute([
+            lambda s, t: self.step_set_environment(s, b'{"default": {"connection": "file:///../target"}}'),
+            lambda s, t: self.step_create(s, a1), lambda s, t: self.step_deploy(s, ['default']),
+            lambda s, t: self.step_expect(t, a1), lambda s, t: self.step_create(s, a2),
+            lambda s, t: self.step_deploy(s, ['default']), lambda s, t: self.step_expect(t, a2)
+        ])
 
-		self.execute ([
-			lambda s, t: self.step_set_environment (s, b'{"default": {"connection": "file:///../target"}}'),
-			lambda s, t: self.step_create (s, a),
-			lambda s, t: self.step_deploy (s, ['default']),
-			lambda s, t: self.step_expect (t, a),
-			lambda s, t: self.step_create (s, c),
-			lambda s, t: self.step_deploy (s, ['default']),
-			lambda s, t: self.step_expect (t, c),
-			lambda s, t: self.step_create (s, b),
-			lambda s, t: self.step_deploy (s, ['default']),
-			lambda s, t: self.step_expect (t, b)
-		])
+    def test_file_multi_update(self):
+        a = {'a/a': b'a'}
+        b = {'b/b': b'b'}
+        c = a.copy()
+        c.update(b)
+
+        self.execute([
+            lambda s, t: self.step_set_environment(s, b'{"default": {"connection": "file:///../target"}}'),
+            lambda s, t: self.step_create(s, a), lambda s, t: self.step_deploy(s, ['default']),
+            lambda s, t: self.step_expect(t, a), lambda s, t: self.step_create(s, c),
+            lambda s, t: self.step_deploy(s, ['default']), lambda s, t: self.step_expect(t, c),
+            lambda s, t: self.step_create(s, b), lambda s, t: self.step_deploy(s, ['default']),
+            lambda s, t: self.step_expect(t, b)
+        ])
+
 
 if __name__ == '__main__':
-    unittest.main ()
+    unittest.main()

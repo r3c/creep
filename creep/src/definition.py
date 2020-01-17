@@ -7,118 +7,123 @@ import re
 from .action import Action
 from .process import Process
 
+
 class DefinitionModifier:
-	def __init__ (self, regex, filter, rename, modify, link):
-		self.filter = filter
-		self.link = link
-		self.modify = modify
-		self.regex = regex
-		self.rename = rename
+    def __init__(self, regex, filter, rename, modify, link):
+        self.filter = filter
+        self.link = link
+        self.modify = modify
+        self.regex = regex
+        self.rename = rename
+
 
 class Definition:
-	def __init__ (self, data, ignores):
-		config = json.loads (data)
-		modifiers = []
+    def __init__(self, data, ignores):
+        config = json.loads(data)
+        modifiers = []
 
-		# Read modifiers from JSON configuration
-		for modifier in config.get ('modifiers', []):
-			modify = modifier.get ('modify', modifier.get ('adapt', None))
-			filter = modifier.get ('filter', None)
-			link = modifier.get ('link', None)
-			rename = modifier.get ('rename', modifier.get ('name', None))
+        # Read modifiers from JSON configuration
+        for modifier in config.get('modifiers', []):
+            modify = modifier.get('modify', modifier.get('adapt', None))
+            filter = modifier.get('filter', None)
+            link = modifier.get('link', None)
+            pattern = modifier['pattern']
+            rename = modifier.get('rename', modifier.get('name', None))
 
-			modifiers.append (DefinitionModifier (re.compile (modifier['pattern']), filter, rename, modify, link))
+            regex = re.compile(pattern)
 
-		# Append ignores specified in arguments
-		for ignore in ignores:
-			modifiers.append (DefinitionModifier (re.compile ('^' + re.escape (ignore) + '$'), '', None, None, None))
+            modifiers.append(DefinitionModifier(regex, filter, rename, modify, link))
 
-		self.modifiers = modifiers
-		self.options = config.get ('options', {})
-		self.source = config.get ('source', None)
+        # Append ignores specified in arguments
+        for ignore in ignores:
+            modifiers.append(DefinitionModifier(re.compile('^' + re.escape(ignore) + '$'), '', None, None, None))
 
-	def apply (self, logger, work, path, type, used):
-		# Ensure we don't process a file already scanned
-		path = os.path.normpath (path)
+        self.modifiers = modifiers
+        self.options = config.get('options', {})
+        self.source = config.get('source', None)
 
-		if path in used:
-			return []
+    def apply(self, logger, work, path, type, used):
+        # Ensure we don't process a file already scanned
+        path = os.path.normpath(path)
 
-		used.add (path)
+        if path in used:
+            return []
 
-		# Find modifier matching current file name if any
-		name = os.path.basename (path)
+        used.add(path)
 
-		for modifier in self.modifiers:
-			match = modifier.regex.search (name)
+        # Find modifier matching current file name if any
+        name = os.path.basename(path)
 
-			if match is None:
-				continue
+        for modifier in self.modifiers:
+            match = modifier.regex.search(name)
 
-			logger.debug ('File \'{0}\' matches \'{1}\'.'.format (path, modifier.regex.pattern))
+            if match is None:
+                continue
 
-			actions = []
+            logger.debug('File \'{0}\' matches \'{1}\'.'.format(path, modifier.regex.pattern))
 
-			# Apply renaming pattern if any
-			if modifier.rename is not None:
-				previous_path = path
+            actions = []
 
-				name = os.path.basename (re.sub ('\\\\([0-9]+)', lambda m: match.group (int (m.group (1))), modifier.rename))
-				path = os.path.normpath (os.path.join (os.path.dirname (path), name))
+            # Apply renaming pattern if any
+            if modifier.rename is not None:
+                previous_path = path
 
-				if type == Action.ADD:
-					os.rename (os.path.join (work, previous_path), os.path.join (work, path))
+                name = os.path.basename(re.sub('\\\\([0-9]+)', lambda m: match.group(int(m.group(1))), modifier.rename))
+                path = os.path.normpath(os.path.join(os.path.dirname(path), name))
 
-				logger.debug ('File \'{0}\' renamed to \'{1}\'.'.format (path, name))
+                if type == Action.ADD:
+                    os.rename(os.path.join(work, previous_path), os.path.join(work, path))
 
-			if type == Action.ADD:
-				# Apply link command if any
-				if modifier.link is not None:
-					out = self.run (work, path, modifier.link)
+                logger.debug('File \'{0}\' renamed to \'{1}\'.'.format(path, name))
 
-					if out is not None:
-						for link in out.decode ('utf-8').splitlines ():
-							logger.debug ('File \'{0}\' is linked to file \'{1}\'.'.format (path, link))
+            if type == Action.ADD:
+                # Apply link command if any
+                if modifier.link is not None:
+                    out = self.run(work, path, modifier.link)
 
-							actions.extend (self.apply (logger, work, link, type, used))
-					else:
-						logger.warning ('Command \'link\' on file \'{0}\' returned non-zero code.'.format (path))
+                    if out is not None:
+                        for link in out.decode('utf-8').splitlines():
+                            logger.debug('File \'{0}\' is linked to file \'{1}\'.'.format(path, link))
 
-						type = Action.ERR
+                            actions.extend(self.apply(logger, work, link, type, used))
+                    else:
+                        logger.warning('Command \'link\' on file \'{0}\' returned non-zero code.'.format(path))
 
-				# Build output file using processing command if any
-				if modifier.modify is not None:
-					out = self.run (work, path, modifier.modify)
+                        type = Action.ERR
 
-					if out is not None:
-						with open (os.path.join (work, path), 'wb') as file:
-							file.write (out)
-					else:
-						logger.warning ('Command \'modify\' on file \'{0}\' returned non-zero code.'.format (path))
+                # Build output file using processing command if any
+                if modifier.modify is not None:
+                    out = self.run(work, path, modifier.modify)
 
-						type = Action.ERR
+                    if out is not None:
+                        with open(os.path.join(work, path), 'wb') as file:
+                            file.write(out)
+                    else:
+                        logger.warning('Command \'modify\' on file \'{0}\' returned non-zero code.'.format(path))
 
-			# Apply filtering command if any
-			if modifier.filter is not None and (modifier.filter == '' or self.run (work, path, modifier.filter) is None):
-				logger.debug ('File \'{0}\' filtered out.'.format (path))
+                        type = Action.ERR
 
-				type = Action.NOP
+            # Apply filtering command if any
+            if modifier.filter is not None and (modifier.filter == '' or self.run(work, path, modifier.filter) is None):
+                logger.debug('File \'{0}\' filtered out.'.format(path))
 
-			# Append action to list and return
-			actions.append (Action (path, type))
+                type = Action.NOP
 
-			return actions
+            # Append action to list and return
+            actions.append(Action(path, type))
 
-		# No modifier matched, return unmodified input
-		return [Action (path, type)]
+            return actions
 
-	def run (self, work, path, command):
-		result = Process (command.replace ('{}', path)) \
-			.set_directory (work) \
-			.set_shell (True) \
-			.execute ()
+        # No modifier matched, return unmodified input
+        return [Action(path, type)]
 
-		if not result:
-			return None
+    def run(self, work, path, command):
+        result = Process (command.replace ('{}', path)) \
+         .set_directory (work) \
+         .set_shell (True) \
+         .execute ()
 
-		return result.out
+        if not result:
+            return None
+
+        return result.out

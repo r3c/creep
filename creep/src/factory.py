@@ -12,67 +12,78 @@ import os
 import re
 import urllib
 
-def create_source (source, options, base_path):
-	source = source or detect (base_path)
 
-	if source == 'delta' or source == 'hash':
-		from .sources.hash import HashSource
+def _wrap_or_none(value, callback):
+    if value is not None:
+        return callback(value)
 
-		return HashSource (options)
+    return None
 
-	if source == 'git':
-		from .sources.git import GitSource
 
-		return GitSource ()
+def create_source(source, options, base_path):
+    source = source or detect(base_path)
 
-	# No known source type recognized
-	return None
+    if source == 'delta' or source == 'hash':
+        from .sources.hash import HashSource
 
-def create_target (logger, connection, options, base_path):
-	# FIXME: should use urllib.parse [url-parse]
-	match = re.match ('([+0-9A-Za-z]+)://(?:([^#/:@]+)(?::([^#/@]+))?@)?(?:([^#/:]+)(?::([0-9]+))?)?(?:/([^#]*))?', connection)
+        return HashSource(options)
 
-	if match is None:
-		return None
+    if source == 'git':
+        from .sources.git import GitSource
 
-	directory = match.group (6) or '.'
-	host = match.group (4)
-	password = match.group (3) is not None and unquote_plus (match.group (3)) or match.group (3)
-	port = match.group (5) is not None and int (match.group (5)) or None
-	scheme = match.group (1)
-	user = match.group (2) is not None and unquote_plus (match.group (2)) or match.group (2)
+        return GitSource()
 
-	if scheme == 'file':
-		if password is not None or port is not None or user is not None:
-			logger.warn ('Connection string for "file" scheme shouldn\'t contain any port, user or password.')
+    # No known source type recognized
+    return None
 
-		from .targets.file import FileTarget
 
-		return FileTarget (os.path.join (base_path, directory))
+def create_target(logger, connection, options, base_path):
+    # FIXME: should use urllib.parse [url-parse]
+    match = re.match('([+0-9A-Za-z]+)://(?:([^#/:@]+)(?::([^#/@]+))?@)?(?:([^#/:]+)(?::([0-9]+))?)?(?:/([^#]*))?',
+                     connection)
 
-	if scheme == 'ftp':
-		from .targets.ftp import FTPTarget
+    if match is None:
+        return None
 
-		return FTPTarget (host, port, user, password, directory, options)
+    directory = match.group(6) or '.'
+    host = match.group(4)
+    password = _wrap_or_none(match.group(3), unquote_plus)
+    port = _wrap_or_none(match.group(5), int)
+    scheme = match.group(1)
+    user = _wrap_or_none(match.group(2), unquote_plus)
 
-	if scheme == 'ssh':
-		if password is not None:
-			logger.warn ('Connection string for "ssh" scheme shouldn\'t contain any password.')
+    if scheme == 'file':
+        if password is not None or port is not None or user is not None:
+            logger.warn('Connection string for "file" scheme shouldn\'t contain any port, user or password.')
 
-		from .targets.ssh import SSHTarget
+        from .targets.file import FileTarget
 
-		return SSHTarget (host, port, user, directory, options)
+        return FileTarget(os.path.join(base_path, directory))
 
-	# No known scheme recognized
-	return None
+    if scheme == 'ftp':
+        from .targets.ftp import FTPTarget
 
-def detect (directory):
-	drive, tail = os.path.splitdrive (os.path.abspath (directory))
-	names = path.explode (tail)
+        return FTPTarget(host, port, user, password, directory, options)
 
-	# Detect '.git' file or directory in parent folders
-	if any ((os.path.exists (drive + os.path.join (*(names[0:n] + ['.git']))) for n in range (len (names), 0, -1))):
-		return 'git'
+    if scheme == 'ssh':
+        if password is not None:
+            logger.warn('Connection string for "ssh" scheme shouldn\'t contain any password.')
 
-	# Fallback to hash source by default
-	return 'hash'
+        from .targets.ssh import SSHTarget
+
+        return SSHTarget(host, port, user, directory, options)
+
+    # No known scheme recognized
+    return None
+
+
+def detect(directory):
+    drive, tail = os.path.splitdrive(os.path.abspath(directory))
+    names = path.explode(tail)
+
+    # Detect '.git' file or directory in parent folders
+    if any((os.path.exists(drive + os.path.join(*(names[0:n] + ['.git']))) for n in range(len(names), 0, -1))):
+        return 'git'
+
+    # Fallback to hash source by default
+    return 'hash'
