@@ -8,3 +8,6 @@ __pycache__
 # Python egg metadata, regenerated from source files by setuptools.
 /.eggs
 /*.egg-info
+
+# IDE configuration
+/.vscode/
