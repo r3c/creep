@@ -18,13 +18,16 @@ locations. Only modified files are transferred between two deployments. This
 tracking mechanism depends on the type of directory used, for exemple Creep uses
 revision hashes when deploying from a Git repository.
 
+
 Installing
 ----------
 
-You can install Creep using either pip or manual install from sources. If you
-choose to use pip, just type the following:
+You will need an environment with Python 3 (>= 3.6) before installing Creep.
 
-	$ pip install creep
+Creep can be installed using either PIP or manual install from sources. If you
+choose to use PIP, just type the following:
+
+	$ pip3 install creep
 	$ creep -h # display help to ensure install worked properly
 
 If you prefer manual install checkout the Git repository anywhere you want. Then
@@ -38,6 +41,7 @@ convenient but not mandatory, you can call Creep using full path to `creep.py`:
 
 After installation go to your project folder and continue reading to deploy your
 first project.
+
 
 Quick start
 -----------
@@ -77,6 +81,7 @@ send only the file you changed rather than the full project.
 This basic example shows how to incrementally deploy a project to some local
 directory. Next sections will show how to deploy to remote locations (FTP or
 SSH) and register several deployment configurations.
+
 
 Environment file
 ----------------
@@ -183,6 +188,7 @@ If you prefer not to write environment configuration as files, you can also
 pass it as a JSON string using `-e` command line option:
 
 	creep -e '{"default": {"connection": "ftp://me:password@host"}}'
+
 
 Definition file
 ---------------
@@ -309,6 +315,7 @@ Like for environment configuration you can also specify definition
 configuration as a JSON string instead of file using `-d` command line option:
 
 	creep -d '{"source": "hash"}'
+
 
 Troubleshooting
 ---------------
