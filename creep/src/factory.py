@@ -13,6 +13,18 @@ import re
 import urllib
 
 
+def _detect_source(directory):
+    drive, tail = os.path.splitdrive(os.path.abspath(directory))
+    names = path.explode(tail)
+
+    # Detect '.git' file or directory in parent folders
+    if any((os.path.exists(drive + os.path.join(*(names[0:n] + ['.git']))) for n in range(len(names), 0, -1))):
+        return 'git'
+
+    # Fallback to hash source by default
+    return 'hash'
+
+
 def _wrap_or_none(value, callback):
     if value is not None:
         return callback(value)
@@ -21,7 +33,7 @@ def _wrap_or_none(value, callback):
 
 
 def create_source(source, options, base_path):
-    source = source or detect(base_path)
+    source = source or _detect_source(base_path)
 
     if source == 'delta' or source == 'hash':
         from .sources.hash import HashSource
@@ -75,15 +87,3 @@ def create_target(logger, connection, options, base_path):
 
     # No known scheme recognized
     return None
-
-
-def detect(directory):
-    drive, tail = os.path.splitdrive(os.path.abspath(directory))
-    names = path.explode(tail)
-
-    # Detect '.git' file or directory in parent folders
-    if any((os.path.exists(drive + os.path.join(*(names[0:n] + ['.git']))) for n in range(len(names), 0, -1))):
-        return 'git'
-
-    # Fallback to hash source by default
-    return 'hash'
