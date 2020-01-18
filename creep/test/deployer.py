@@ -39,7 +39,7 @@ class DeployerTester(unittest.TestCase):
                 file.write(data)
 
     def step_deploy(self, source, locations, definition='.creep.def', environment='.creep.env'):
-        deployer = Deployer(Logger.build(logging.CRITICAL), definition, environment, True)
+        deployer = Deployer(Logger.build(logging.WARNING), definition, environment, True)
 
         self.assertTrue(deployer.deploy(source, locations, [], [], None, None))
 

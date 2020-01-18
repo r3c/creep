@@ -7,9 +7,32 @@ from .environment import Environment
 from .revision import Revision
 
 import codecs
+import json
 import os
 import shutil
 import tempfile
+
+
+def _read_json(base_path, json_or_path, default):
+    # Input looks like a JSON object
+    if json_or_path[0:1] == '{':
+        contents = json_or_path
+        file_name = None
+
+    # Otherwise consider it as a file path
+    else:
+        file_name = json_or_path[0:1] == '@' and json_or_path[1:] or json_or_path
+        file_path = os.path.join(base_path, file_name)
+
+        if not os.path.isfile(file_path):
+            return (default, None)
+
+        reader = codecs.getreader('utf-8')
+
+        with open(file_path, 'rb') as file:
+            contents = reader(file).read()
+
+    return (json.loads(contents), file_name)
 
 
 class Deployer:
@@ -26,47 +49,28 @@ class Deployer:
 
             return False
 
-        # Load environment configuration from command line argument or file
         ignores = []
 
-        if self.environment[0:1] == '{':
-            environment_json = self.environment
-        else:
-            environment_name = self.environment[0:1] == '@' and self.environment[1:] or self.environment
-            environment_path = os.path.join(base_path, environment_name)
+        # Load environment configuration from command line argument or file
+        (environment_config, environment_name) = _read_json(base_path, self.environment, None)
 
-            if os.path.isfile(environment_path):
-                reader = codecs.getreader('utf-8')
+        if environment_config is None:
+            self.logger.error('Environment file "{0}" doesn\'t exist.'.format(file_path))
 
-                with open(environment_path, 'rb') as file:
-                    environment_json = reader(file).read()
-            else:
-                self.logger.warning('Environment file "{0}" doesn\'t exist.'.format(environment_path))
+            return False
 
-                return False
-
+        if environment_name is not None:
             ignores.append(environment_name)
 
-        environment = Environment(environment_json)
+        environment = Environment(self.logger, environment_config)
 
         # Read definition configuration from command line argument or file
-        if self.definition[0:1] == '{':
-            definition_json = self.definition
-        else:
-            definition_name = self.definition[0:1] == '@' and self.definition[1:] or self.definition
-            definition_path = os.path.join(base_path, definition_name)
+        (definition_config, definition_name) = _read_json(base_path, self.definition, {})
 
-            if os.path.isfile(definition_path):
-                reader = codecs.getreader('utf-8')
-
-                with open(definition_path, 'rb') as file:
-                    definition_json = reader(file).read()
-            else:
-                definition_json = '{}'
-
+        if definition_name is not None:
             ignores.append(definition_name)
 
-        definition = Definition(definition_json, ignores)
+        definition = Definition(self.logger, definition_config, ignores)
 
         # Expand location names
         if len(names) < 1:
@@ -81,7 +85,7 @@ class Deployer:
             location = environment.get_location(name)
 
             if location is None:
-                self.logger.error('There is no location "{0}" in your environment file.'.format(name))
+                self.logger.warning('There is no location "{0}" in your environment file.'.format(name))
 
                 continue
 
@@ -127,7 +131,7 @@ class Deployer:
 
         if source is None:
             self.logger.error(
-                'Unknown source type in folder "{0}", try specifying "source" option in definition file.'.format(
+                'Unknown source type in directory "{0}", try specifying "source" option in definition file.'.format(
                     base_path))
 
             return False
@@ -229,7 +233,7 @@ class Deployer:
             used = set()
 
             for command in source_actions + manual_actions:
-                actions.extend(definition.apply(self.logger, work_path, command.path, command.type, used))
+                actions.extend(definition.apply(work_path, command.path, command.type, used))
 
             # Update current revision (remote mode)
             if rev_from != rev_to and not location.local:

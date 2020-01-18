@@ -54,7 +54,7 @@ def create_target(logger, connection, options, base_path):
 
     if scheme == 'file':
         if password is not None or port is not None or user is not None:
-            logger.warn('Connection string for "file" scheme shouldn\'t contain any port, user or password.')
+            logger.warning('Connection string for "file" scheme shouldn\'t contain any port, user or password.')
 
         from .targets.file import FileTarget
 
@@ -67,7 +67,7 @@ def create_target(logger, connection, options, base_path):
 
     if scheme == 'ssh':
         if password is not None:
-            logger.warn('Connection string for "ssh" scheme shouldn\'t contain any password.')
+            logger.warning('Connection string for "ssh" scheme shouldn\'t contain any password.')
 
         from .targets.ssh import SSHTarget
 

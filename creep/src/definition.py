@@ -18,19 +18,26 @@ class DefinitionModifier:
 
 
 class Definition:
-    def __init__(self, data, ignores):
-        config = json.loads(data)
+    def __init__(self, logger, config, ignores):
         modifiers = []
 
         # Read modifiers from JSON configuration
         for modifier in config.get('modifiers', []):
-            modify = modifier.get('modify', modifier.get('adapt', None))
+            adapt = modifier.get('adapt', None)
+            name = modifier.get('name', None)
+
+            if adapt is not None:
+                logger.warning('Deprecated property "adapt" should be replaced by "modify" in definition file.')
+
+            if name is not None:
+                logger.warning('Deprecated property "name" should be replaced by "rename" in definition file.')
+
+            modify = modifier.get('modify', adapt)
             filter = modifier.get('filter', None)
             link = modifier.get('link', None)
-            pattern = modifier['pattern']
-            rename = modifier.get('rename', modifier.get('name', None))
+            rename = modifier.get('rename', name)
 
-            regex = re.compile(pattern)
+            regex = re.compile(modifier['pattern'])
 
             modifiers.append(DefinitionModifier(regex, filter, rename, modify, link))
 
@@ -38,11 +45,12 @@ class Definition:
         for ignore in ignores:
             modifiers.append(DefinitionModifier(re.compile('^' + re.escape(ignore) + '$'), '', None, None, None))
 
+        self.logger = logger
         self.modifiers = modifiers
         self.options = config.get('options', {})
         self.source = config.get('source', None)
 
-    def apply(self, logger, work, path, type, used):
+    def apply(self, work, path, type, used):
         # Ensure we don't process a file already scanned
         path = os.path.normpath(path)
 
@@ -60,7 +68,7 @@ class Definition:
             if match is None:
                 continue
 
-            logger.debug('File \'{0}\' matches \'{1}\'.'.format(path, modifier.regex.pattern))
+            self.logger.debug('File \'{0}\' matches \'{1}\'.'.format(path, modifier.regex.pattern))
 
             actions = []
 
@@ -74,7 +82,7 @@ class Definition:
                 if type == Action.ADD:
                     os.rename(os.path.join(work, previous_path), os.path.join(work, path))
 
-                logger.debug('File \'{0}\' renamed to \'{1}\'.'.format(path, name))
+                self.logger.debug('File \'{0}\' renamed to \'{1}\'.'.format(path, name))
 
             if type == Action.ADD:
                 # Apply link command if any
@@ -83,11 +91,11 @@ class Definition:
 
                     if out is not None:
                         for link in out.decode('utf-8').splitlines():
-                            logger.debug('File \'{0}\' is linked to file \'{1}\'.'.format(path, link))
+                            self.logger.debug('File \'{0}\' is linked to file \'{1}\'.'.format(path, link))
 
-                            actions.extend(self.apply(logger, work, link, type, used))
+                            actions.extend(self.apply(work, link, type, used))
                     else:
-                        logger.warning('Command \'link\' on file \'{0}\' returned non-zero code.'.format(path))
+                        self.logger.warning('Command \'link\' on file \'{0}\' returned non-zero code.'.format(path))
 
                         type = Action.ERR
 
@@ -99,13 +107,13 @@ class Definition:
                         with open(os.path.join(work, path), 'wb') as file:
                             file.write(out)
                     else:
-                        logger.warning('Command \'modify\' on file \'{0}\' returned non-zero code.'.format(path))
+                        self.logger.warning('Command \'modify\' on file \'{0}\' returned non-zero code.'.format(path))
 
                         type = Action.ERR
 
             # Apply filtering command if any
             if modifier.filter is not None and (modifier.filter == '' or self.run(work, path, modifier.filter) is None):
-                logger.debug('File \'{0}\' filtered out.'.format(path))
+                self.logger.debug('File \'{0}\' filtered out.'.format(path))
 
                 type = Action.NOP
 
