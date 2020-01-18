@@ -126,22 +126,11 @@ class Deployer:
             self.logger.warning('Invalid answer')
 
     def sync(self, base_path, definition, location, name, append_files, remove_files, rev_from, rev_to):
-        # Build source repository reader from current directory
-        source = factory.create_source(definition.source, definition.options, base_path)
-
-        if source is None:
-            self.logger.error(
-                'Unknown source type in directory "{0}", try specifying "source" option in definition file.'.format(
-                    base_path))
-
-            return False
-
-        # Build target from location connection string
+        # Build source repository reader from current directory and target from location connection string
+        source = factory.create_source(self.logger, definition.source, definition.options, base_path)
         target = factory.create_target(self.logger, location.connection, location.options, base_path)
 
-        if target is None:
-            self.logger.error('Unsupported scheme in connection string "{0}".'.format(location.connection))
-
+        if source is None or target is None:
             return False
 
         # Read revision file

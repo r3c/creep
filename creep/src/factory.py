@@ -32,7 +32,7 @@ def _wrap_or_none(value, callback):
     return None
 
 
-def create_source(source, options, base_path):
+def create_source(logger, source, options, base_path):
     source = source or _detect_source(base_path)
 
     if source == 'delta' or source == 'hash':
@@ -46,6 +46,8 @@ def create_source(source, options, base_path):
         return GitSource()
 
     # No known source type recognized
+    logger.error('Unsupported source type "{0}" in definition file.'.format(source))
+
     return None
 
 
@@ -55,6 +57,8 @@ def create_target(logger, connection, options, base_path):
                      connection)
 
     if match is None:
+        logger.error('Could not parse connection strings "{0}" as a URL.'.format(connection))
+
         return None
 
     directory = match.group(6) or '.'
@@ -86,4 +90,6 @@ def create_target(logger, connection, options, base_path):
         return SSHTarget(host, port, user, directory, options)
 
     # No known scheme recognized
+    logger.error('Unsupported scheme in connection string "{0}".'.format(connection))
+
     return None
