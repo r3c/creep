@@ -50,7 +50,7 @@ class SSHTarget:
 
             # Send and delete files on remote host
             if to_add:
-                result = Process(self.tunnel + ['tar xC \'' + pipes.quote(self.directory) + '\'']).set_input(
+                result = Process(self.tunnel + ['tar xC \'' + pipes.quote(self.directory) + '\'']).set_input_byte(
                     archive.read()).execute()
 
                 if not result:
@@ -60,7 +60,7 @@ class SSHTarget:
                     return False
 
             if len(to_del) > 0:
-                result = Process(self.tunnel + ['sh']).set_input(';'.join(
+                result = Process(self.tunnel + ['sh']).set_input_str(';'.join(
                     ['rm -f \'' + pipes.quote(path) + '\'' for path in to_del])).execute()
 
                 if not result:

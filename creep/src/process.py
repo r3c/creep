@@ -24,6 +24,7 @@ class Process:
         self.parent = None
         self.shell = False
         self.stdin = None
+        self.text = None
 
     def _open(self, stdout):
         process = subprocess.Popen(self.args,
@@ -31,7 +32,8 @@ class Process:
                                    shell=self.shell,
                                    stderr=subprocess.PIPE,
                                    stdin=self.stdin,
-                                   stdout=stdout)
+                                   stdout=stdout,
+                                   text=self.text)
 
         if self.parent is not None:
             self.parent._open(process.stdin)
@@ -57,9 +59,17 @@ class Process:
 
         return self
 
-    def set_input(self, input):
+    def set_input_byte(self, input):
         self.input = input
         self.stdin = subprocess.PIPE
+        self.text = None
+
+        return self
+
+    def set_input_str(self, input):
+        self.input = input
+        self.stdin = subprocess.PIPE
+        self.text = True
 
         return self
 
