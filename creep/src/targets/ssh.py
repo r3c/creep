@@ -50,8 +50,8 @@ class SSHTarget:
 
             # Send and delete files on remote host
             if to_add:
-                result = Process(self.tunnel + ['tar xC \'' + pipes.quote(self.directory) + '\'']).set_input_byte(
-                    archive.read()).execute()
+                arguments = ['tar xC \'' + pipes.quote(self.directory) + '\'']
+                result = Process(self.tunnel + arguments).set_input(archive.read()).execute()
 
                 if not result:
                     logger.warning('Couldn\'t push files to SSH target.')
@@ -60,8 +60,8 @@ class SSHTarget:
                     return False
 
             if len(to_del) > 0:
-                result = Process(self.tunnel + ['sh']).set_input_str(';'.join(
-                    ['rm -f \'' + pipes.quote(path) + '\'' for path in to_del])).execute()
+                commands = ';'.join(['rm -f \'' + pipes.quote(path) + '\'' for path in to_del])
+                result = Process(self.tunnel + ['sh']).set_input(commands.encode('utf-8')).execute()
 
                 if not result:
                     logger.warning('Couldn\'t delete files from SSH target.')
