@@ -203,7 +203,7 @@ project files.
 Definition configuration file uses JSON format and looks like this:
 
 	{
-		"source": "hash",
+		"tracker": "hash",
 		"options": {
 			"algorithm": "md5",
 			"follow": false
@@ -216,21 +216,21 @@ Definition configuration file uses JSON format and looks like this:
 		]
 	}
 
-The `source` part specifies how Creep should analyze differences when you
-execute it inside this directory. When this option is not specified Creep will
-auto-detect it based on current environment. The `options` allows you to tune
-behavior of the selected `source` by specifying custom parameters. Here is the
-list of supported sources and associated options:
+The `tracker` property specifies how Creep should analyze differences between
+work directory and target location. When this option is not specified Creep
+will auto-detect it based on current environment. The `options` allows you to
+tune behavior of the selected `tracker` by specifying custom parameters. Here
+is the list of supported trackers and associated options:
 
 - Git versionning:
-  - Specify `git` source so local `git` executable is used to get diff between
+  - Specify `git` tracker so local `git` executable is used to get diff between
     two revisions. When using this mode Creep relies on Git history and only
     needs to remember which revision has been deployed. It also allows you to
     manually specify the revision you want to deploy through command line
     argument.
-  - No options are available for this source type.
+  - No options are available for this tracker type.
 - File hash:
-  - Specify `hash` source to have Creep computing a hash of each file to detect
+  - Specify `hash` tracker to have Creep computing a hash of each file to detect
     differences. This mode has a higher overhead than Git since it has to save
     a value for each file rather than one unique revision, but can work with any
     regular folder.
@@ -314,7 +314,7 @@ but you may do so by adding explicit modifiers matching them.
 Like for environment configuration you can also specify definition
 configuration as a JSON string instead of file using `-d` command line option:
 
-	creep -d '{"source": "hash"}'
+	creep -d '{"tracker": "hash"}'
 
 
 Troubleshooting

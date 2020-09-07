@@ -26,7 +26,7 @@ setup(name='creep',
           'Topic :: System :: Archiving :: Mirroring', 'Topic :: System :: Software Distribution'
       ],
       install_requires=['setuptools>=1.0'],
-      packages=['creep', 'creep.src', 'creep.src.sources', 'creep.src.targets'],
+      packages=['creep', 'creep.src', 'creep.src.targets', 'creep.src.trackers'],
       entry_points={'console_scripts': ['creep = creep.creep:main']},
       test_suite='creep.test',
       tests_require=['nose'])

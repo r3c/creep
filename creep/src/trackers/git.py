@@ -4,7 +4,7 @@ from ..action import Action
 from ..process import Process
 
 
-class GitSource:
+class GitTracker:
     def current(self, base_path):
         revision = Process (['git', 'rev-parse', '--quiet', '--verify', 'HEAD']) \
          .set_directory (base_path) \

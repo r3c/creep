@@ -8,6 +8,16 @@ from .action import Action
 from .process import Process
 
 
+def _get_or_fallback(logger, source, key, obsolete):
+    fallback = source.get(obsolete, None)
+
+    if fallback is not None:
+        logger.warning('Deprecated property "{0}" should be replaced by "{1}" in definition file.'.format(
+            obsolete, key))
+
+    return source.get(key, fallback)
+
+
 class DefinitionModifier:
     def __init__(self, regex, filter, rename, modify, link):
         self.filter = filter
@@ -23,19 +33,10 @@ class Definition:
 
         # Read modifiers from JSON configuration
         for modifier in config.get('modifiers', []):
-            adapt = modifier.get('adapt', None)
-            name = modifier.get('name', None)
-
-            if adapt is not None:
-                logger.warning('Deprecated property "adapt" should be replaced by "modify" in definition file.')
-
-            if name is not None:
-                logger.warning('Deprecated property "name" should be replaced by "rename" in definition file.')
-
-            modify = modifier.get('modify', adapt)
+            modify = _get_or_fallback(logger, modifier, 'modify', 'adapt')
             filter = modifier.get('filter', None)
             link = modifier.get('link', None)
-            rename = modifier.get('rename', name)
+            rename = _get_or_fallback(logger, modifier, 'rename', 'name')
 
             regex = re.compile(modifier['pattern'])
 
@@ -48,7 +49,7 @@ class Definition:
         self.logger = logger
         self.modifiers = modifiers
         self.options = config.get('options', {})
-        self.source = config.get('source', None)
+        self.tracker = _get_or_fallback(logger, config, 'tracker', 'source')
 
     def apply(self, work, path, type, used):
         # Ensure we don't process a file already scanned

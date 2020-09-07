@@ -7,7 +7,7 @@ from ..action import Action
 from .. import path
 
 
-class HashSource:
+class HashTracker:
     def __init__(self, options):
         self.algorithm = options.get('algorithm', 'md5')
         self.follow = options.get('follow', True)

@@ -13,7 +13,7 @@ import re
 import urllib
 
 
-def _detect_source(directory):
+def _detect_tracker(directory):
     drive, tail = os.path.splitdrive(os.path.abspath(directory))
     names = path.explode(tail)
 
@@ -21,32 +21,13 @@ def _detect_source(directory):
     if any((os.path.exists(drive + os.path.join(*(names[0:n] + ['.git']))) for n in range(len(names), 0, -1))):
         return 'git'
 
-    # Fallback to hash source by default
+    # Fallback to hash tracker by default
     return 'hash'
 
 
 def _wrap_or_none(value, callback):
     if value is not None:
         return callback(value)
-
-    return None
-
-
-def create_source(logger, source, options, base_path):
-    source = source or _detect_source(base_path)
-
-    if source == 'delta' or source == 'hash':
-        from .sources.hash import HashSource
-
-        return HashSource(options)
-
-    if source == 'git':
-        from .sources.git import GitSource
-
-        return GitSource()
-
-    # No known source type recognized
-    logger.error('Unsupported source type "{0}" in definition file.'.format(source))
 
     return None
 
@@ -91,5 +72,24 @@ def create_target(logger, connection, options, base_path):
 
     # No known scheme recognized
     logger.error('Unsupported scheme in connection string "{0}".'.format(connection))
+
+    return None
+
+
+def create_tracker(logger, tracker, options, base_path):
+    tracker = tracker or _detect_tracker(base_path)
+
+    if tracker == 'delta' or tracker == 'hash':
+        from .trackers.hash import HashTracker
+
+        return HashTracker(options)
+
+    if tracker == 'git':
+        from .trackers.git import GitTracker
+
+        return GitTracker()
+
+    # No known tracker type recognized
+    logger.error('Unsupported tracker type "{0}" in definition file.'.format(tracker))
 
     return None

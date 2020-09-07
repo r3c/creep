@@ -125,8 +125,9 @@ class Application:
     def __sync(self, base_path, definition, location, name, append_files, remove_files, rev_from, rev_to):
         # Build repository tracker from current directory and target from location connection string
         target = factory.create_target(self.logger, location.connection, location.options, base_path)
+        tracker = factory.create_tracker(self.logger, definition.tracker, definition.options, base_path)
 
-        if source is None or target is None:
+        if target is None or tracker is None:
             return False
 
         # Read revision file
@@ -160,7 +161,7 @@ class Application:
                 return True
 
         if rev_to is None:
-            rev_to = source.current(base_path)
+            rev_to = tracker.current(base_path)
 
             if rev_to is None:
                 self.logger.error(
@@ -175,9 +176,9 @@ class Application:
 
         try:
             # Append actions from revision diff
-            source_actions = source.diff(self.logger, base_path, work_path, rev_from, rev_to)
+            tracker_actions = tracker.diff(self.logger, base_path, work_path, rev_from, rev_to)
 
-            if source_actions is None:
+            if tracker_actions is None:
                 return False
 
             # Append actions for manually specified files
@@ -217,7 +218,7 @@ class Application:
             actions = []
             used = set()
 
-            for command in source_actions + manual_actions:
+            for command in tracker_actions + manual_actions:
                 actions.extend(definition.apply(work_path, command.path, command.type, used))
 
             # Update current revision (remote mode)
