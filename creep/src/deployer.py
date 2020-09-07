@@ -6,7 +6,6 @@ from .definition import Definition
 from .environment import Environment
 from .revision import Revision
 
-import codecs
 import json
 import os
 import shutil
@@ -27,10 +26,8 @@ def _read_json(base_path, json_or_path, default):
         if not os.path.isfile(file_path):
             return (default, None)
 
-        reader = codecs.getreader('utf-8')
-
         with open(file_path, 'rb') as file:
-            contents = reader(file).read()
+            contents = file.read().decode('utf-8')
 
     return (json.loads(contents), file_name)
 
