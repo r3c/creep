@@ -9,10 +9,10 @@ import unittest
 
 sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 
-from src import Deployer, Logger
+from src import Application, Logger
 
 
-class DeployerTester(unittest.TestCase):
+class ApplicationTester(unittest.TestCase):
     def execute(self, steps):
         directory = tempfile.mkdtemp()
 
@@ -38,11 +38,6 @@ class DeployerTester(unittest.TestCase):
             with open(os.path.join(source, relative), 'wb') as file:
                 file.write(data)
 
-    def step_deploy(self, source, locations, definition='.creep.def', environment='.creep.env'):
-        deployer = Deployer(Logger.build(logging.WARNING), definition, environment, True)
-
-        self.assertTrue(deployer.deploy(source, locations, [], [], None, None))
-
     def step_expect(self, target, files):
         for relative, expected in files.items():
             path = os.path.join(target, relative)
@@ -54,6 +49,11 @@ class DeployerTester(unittest.TestCase):
                     data = file.read()
 
                 self.assertEqual(data, expected)
+
+    def step_run(self, source, locations, definition='.creep.def', environment='.creep.env'):
+        application = Application(Logger.build(logging.WARNING), definition, environment, True)
+
+        self.assertTrue(application.run(source, locations, [], [], None, None))
 
     def step_set_definition(self, source, definition, path='.creep.def'):
         with open(os.path.join(source, path), 'wb') as file:
@@ -70,7 +70,7 @@ class DeployerTester(unittest.TestCase):
             lambda s, t: self.step_create(s, {
                 'aaa': b'a',
                 'bbb': b'b'
-            }), lambda s, t: self.step_deploy(s, ['default']),
+            }), lambda s, t: self.step_run(s, ['default']),
             lambda s, t: self.step_expect(t, {
                 'aaa': b'a',
                 'bbb': None
@@ -83,7 +83,7 @@ class DeployerTester(unittest.TestCase):
             lambda s, t: self.step_create(s, {
                 'aaa': b'a',
                 'bbb': b'b'
-            }), lambda s, t: self.step_deploy(s, ['default'], '{"modifiers": [{"pattern": "^bbb$", "filter": ""}]}'),
+            }), lambda s, t: self.step_run(s, ['default'], '{"modifiers": [{"pattern": "^bbb$", "filter": ""}]}'),
             lambda s, t: self.step_expect(t, {
                 'aaa': b'a',
                 'bbb': None
@@ -95,7 +95,7 @@ class DeployerTester(unittest.TestCase):
 
         self.execute([
             lambda s, t: self.step_set_environment(s, b'{"default": {"connection": "file:///../target"}}'),
-            lambda s, t: self.step_create(s, files), lambda s, t: self.step_deploy(s, ['default']),
+            lambda s, t: self.step_create(s, files), lambda s, t: self.step_run(s, ['default']),
             lambda s, t: self.step_expect(t, files)
         ])
 
@@ -103,7 +103,7 @@ class DeployerTester(unittest.TestCase):
         files = {'aaa': b'a'}
 
         self.execute([
-            lambda s, t: self.step_create(s, files), lambda s, t: self.step_deploy(
+            lambda s, t: self.step_create(s, files), lambda s, t: self.step_run(
                 s, ['default'], '.creep.def', '{"default": {"connection": "file:///../target"}}'),
             lambda s, t: self.step_expect(t, files)
         ])
@@ -113,7 +113,7 @@ class DeployerTester(unittest.TestCase):
 
         self.execute([
             lambda s, t: self.step_set_environment(s, b'{"default": {"connection": "file:///../target"}}'),
-            lambda s, t: self.step_create(s, files), lambda s, t: self.step_deploy(s, ['default']),
+            lambda s, t: self.step_create(s, files), lambda s, t: self.step_run(s, ['default']),
             lambda s, t: self.step_expect(t, files)
         ])
 
@@ -122,7 +122,7 @@ class DeployerTester(unittest.TestCase):
 
         self.execute([
             lambda s, t: self.step_set_environment(s, b'{"default": {"connection": "file:///../target"}}'),
-            lambda s, t: self.step_create(s, files), lambda s, t: self.step_deploy(s, ['default']),
+            lambda s, t: self.step_create(s, files), lambda s, t: self.step_run(s, ['default']),
             lambda s, t: self.step_expect(t, files)
         ])
 
@@ -132,9 +132,9 @@ class DeployerTester(unittest.TestCase):
 
         self.execute([
             lambda s, t: self.step_set_environment(s, b'{"default": {"connection": "file:///../target"}}'),
-            lambda s, t: self.step_create(s, a1), lambda s, t: self.step_deploy(s, ['default']),
+            lambda s, t: self.step_create(s, a1), lambda s, t: self.step_run(s, ['default']),
             lambda s, t: self.step_expect(t, a1), lambda s, t: self.step_create(s, a2),
-            lambda s, t: self.step_deploy(s, ['default']), lambda s, t: self.step_expect(t, a2)
+            lambda s, t: self.step_run(s, ['default']), lambda s, t: self.step_expect(t, a2)
         ])
 
     def test_file_multi_update(self):
@@ -145,10 +145,10 @@ class DeployerTester(unittest.TestCase):
 
         self.execute([
             lambda s, t: self.step_set_environment(s, b'{"default": {"connection": "file:///../target"}}'),
-            lambda s, t: self.step_create(s, a), lambda s, t: self.step_deploy(s, ['default']),
+            lambda s, t: self.step_create(s, a), lambda s, t: self.step_run(s, ['default']),
             lambda s, t: self.step_expect(t, a), lambda s, t: self.step_create(s, c),
-            lambda s, t: self.step_deploy(s, ['default']), lambda s, t: self.step_expect(t, c),
-            lambda s, t: self.step_create(s, b), lambda s, t: self.step_deploy(s, ['default']),
+            lambda s, t: self.step_run(s, ['default']), lambda s, t: self.step_expect(t, c),
+            lambda s, t: self.step_create(s, b), lambda s, t: self.step_run(s, ['default']),
             lambda s, t: self.step_expect(t, b)
         ])
 

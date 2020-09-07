@@ -32,14 +32,14 @@ def _read_json(base_path, json_or_path, default):
     return (json.loads(contents), file_name)
 
 
-class Deployer:
+class Application:
     def __init__(self, logger, definition, environment, yes):
         self.definition = definition
         self.environment = environment
         self.logger = logger
         self.yes = yes
 
-    def deploy(self, base_path, names, append_files, remove_files, rev_from, rev_to):
+    def run(self, base_path, names, append_files, remove_files, rev_from, rev_to):
         # Ensure base directory is valid
         if not os.path.isdir(base_path):
             self.logger.error('Base directory "{0}" doesn\'t exist.'.format(base_path))
@@ -89,7 +89,7 @@ class Deployer:
             if location.connection is not None:
                 self.logger.info('Deploying to location "{0}"...'.format(name))
 
-                if not self.sync(base_path, definition, location, name, append_files, remove_files, rev_from, rev_to):
+                if not self.__sync(base_path, definition, location, name, append_files, remove_files, rev_from, rev_to):
                     ok = False
 
                     continue
@@ -100,13 +100,13 @@ class Deployer:
                 self.logger.info('Cascading to path "{0}"...'.format(full_path))
                 self.logger.enter()
 
-                ok = self.deploy(full_path, cascade_names, [], [], None, None) and ok
+                ok = self.run(full_path, cascade_names, [], [], None, None) and ok
 
                 self.logger.leave()
 
         return ok
 
-    def prompt(self, question):
+    def __prompt(self, question):
         if self.yes:
             return True
 
@@ -122,9 +122,8 @@ class Deployer:
 
             self.logger.warning('Invalid answer')
 
-    def sync(self, base_path, definition, location, name, append_files, remove_files, rev_from, rev_to):
-        # Build source repository reader from current directory and target from location connection string
-        source = factory.create_source(self.logger, definition.source, definition.options, base_path)
+    def __sync(self, base_path, definition, location, name, append_files, remove_files, rev_from, rev_to):
+        # Build repository tracker from current directory and target from location connection string
         target = factory.create_target(self.logger, location.connection, location.options, base_path)
 
         if source is None or target is None:
@@ -156,7 +155,7 @@ class Deployer:
         if rev_from is None:
             rev_from = revision.get(name)
 
-            if rev_from is None and not self.prompt(
+            if rev_from is None and not self.__prompt(
                     'No current revision found, are you deploying for the first time? [Y/N]'):
                 return True
 
@@ -239,7 +238,7 @@ class Deployer:
             console = ConsoleTarget()
             console.send(self.logger, work_path, actions)
 
-            if not self.prompt('Deploy? [Y/N]'):
+            if not self.__prompt('Deploy? [Y/N]'):
                 return True
 
             # Execute processed actions after ordering them by precedence

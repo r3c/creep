@@ -1,4 +1,4 @@
 #!/usr/bin/python3
 
-from .deployer import Deployer
+from .application import Application
 from .logger import Logger
