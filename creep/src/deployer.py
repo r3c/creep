@@ -55,7 +55,7 @@ class Deployer:
         (environment_config, environment_name) = _read_json(base_path, self.environment, None)
 
         if environment_config is None:
-            self.logger.error('Environment file "{0}" doesn\'t exist.'.format(file_path))
+            self.logger.error('No environment file "{0}" found in base directory.'.format(self.environment))
 
             return False
 
