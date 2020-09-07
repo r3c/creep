@@ -167,6 +167,23 @@ class ApplicationTester(unittest.TestCase):
 
         self.assert_file('target/item.bin', data)
 
+    def test_target_deploy_archive_subdir(self):
+        archive = self.create_file('archive.tar', b'')
+        data = b'Some binary contents'
+
+        with tarfile.open(archive, 'w') as tar:
+            info = tarfile.TarInfo('remove/keep/item.bin')
+            info.size = len(data)
+
+            tar.addfile(info, io.BytesIO(initial_bytes=data))
+
+        target = self.create_directory('target')
+        env = self.create_file('.creep.env', b'{"default": {"connection": "file:///' + target.encode('utf-8') + b'"}}')
+
+        self.deploy('archive.tar:remove', ['default'], environment=env)
+
+        self.assert_file('target/keep/item.bin', data)
+
     def test_target_deploy_multiple(self):
         self.create_directory('target')
         self.create_file('source/aaa', b'a')
