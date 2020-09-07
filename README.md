@@ -83,19 +83,32 @@ directory. Next sections will show how to deploy to remote locations (FTP or
 SSH) and register several deployment configurations.
 
 
+Source path
+-----------
+
+When running `creep` without any argument, Creep will take current working
+directory as your source and synchronize its contents to target location.
+
+You can also specify source as an argument when calling Creep to change this
+behavior and use any directory you want as source:
+
+    $ creep ../my-sources/
+
+Creep also supports deploying from an archive file instead of a directory. If
+first argument is a file Creep will consider it as an archive and extract its
+contents before deploying it:
+
+    $ creep my-sources.zip
+
+
 Environment file
 ----------------
 
-As seen before Creep reads deployment location(s) from a configuration file
-called _environment_ file. It contains one or more named location(s) pointing to
-servers you want to deploy to. Name this file `.creep.env` and put it in any
-directory you want to deploy.
-
-Creep will deploy contents of this directory to remote location(s) and preserve
-hierarchical structure. You can have several environment files in several
-sub-directories inside your projet. For example one in `src` directory to deploy
-executable code and another one in `assets` directory to deploy static files to
-web servers.
+As we saw during quick start steps, Creep reads deployment location(s) from a
+file called an _environment_ file. It contains one or more named location(s)
+pointing to destinations you want to deploy to. By default Creep will search
+for an environment file named `.creep.env` in current directory, but you can
+override this command line option `-e` (see help).
 
 Environment configuration file uses JSON format and looks like this:
 
@@ -117,11 +130,12 @@ credentials and/or path. Read details below for more information about supported
 protocols.
 
 Once environment configuration file is ready you can start using Creep. Just
-type `creep <name>` where `<name>` is name of a configured location. You can
-also specify multiple locations (`creep <name1> <name2> ...`) or use `*` to
-deploy everywhere (`creep '*'`, don't forget to escape the `*` if you're running
+type `creep <source> <name>` where `<name>` is name of a configured location.
+You can also specify multiple locations
+(`creep <source> <name1> <name2> ...`) or use `*` to deploy everywhere
+(`creep <source> '*'`, don't forget to escape the `*` if you're running
 Creep from within a shell). If you don't specify any name Creep will deploy to
-`default` location.
+location named `default`.
 
 Creep will then fetch last deployed revision from remote location and compute
 difference. When you deploy for the first time there is no last deployed
@@ -160,7 +174,7 @@ Here is the list of supported protocols with expected connection string format
 and available options:
 
 - Local file system:
-  - Use connection format `file:///path` where path is relative to current
+  - Use connection format `file:///path` where path is relative to source
     directory.
   - Note the use of triple slash `///` because file protocol has no hostname.
 - FTP:
@@ -188,6 +202,15 @@ If you prefer not to write environment configuration as files, you can also
 pass it as a JSON string using `-e` command line option:
 
 	creep -e '{"default": {"connection": "ftp://me:password@host"}}'
+
+It's often convenient to keep the environment file at the top-level of the
+directory you want to deploy, so that running `creep` without any argument will
+perform a deployment of this directory using settings from the `.creep.env`
+file it found there. You can create multiple environment files in
+sub-directories inside your projet in case they require different deployment
+configurations, for example one in `src` directory to deploy executable code
+to your application server and another one in `assets` directory to deploy
+static files to your web server.
 
 
 Definition file
