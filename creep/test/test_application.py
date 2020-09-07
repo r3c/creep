@@ -1,8 +1,10 @@
 #!/usr/bin/python3
 
+import io
 import logging
 import os
 import sys
+import tarfile
 import tempfile
 import unittest
 
@@ -31,10 +33,12 @@ class ApplicationTester(unittest.TestCase):
         else:
             self.assertFalse(os.path.exists(path))
 
-    def create_directory(self, directory):
-        path = os.path.join(self.directory.name, directory)
+    def create_directory(self, name):
+        path = os.path.join(self.directory.name, name)
 
         os.makedirs(path, exist_ok=True)
+
+        return path
 
     def create_file(self, name, data):
         path = os.path.join(self.directory.name, name)
@@ -43,6 +47,8 @@ class ApplicationTester(unittest.TestCase):
 
         with open(path, 'wb') as file:
             file.write(data)
+
+        return path
 
     def delete_file(self, name):
         path = os.path.join(self.directory.name, name)
@@ -143,6 +149,23 @@ class ApplicationTester(unittest.TestCase):
         self.create_file('source/a/a', b'aaa')
         self.deploy('source', ['default'])
         self.assert_file('target/a/a', b'aaa')
+
+    def test_target_deploy_archive(self):
+        archive = self.create_file('archive.tar', b'')
+        data = b'Some binary contents'
+
+        with tarfile.open(archive, 'w') as tar:
+            info = tarfile.TarInfo('item.bin')
+            info.size = len(data)
+
+            tar.addfile(info, io.BytesIO(initial_bytes=data))
+
+        target = self.create_directory('target')
+        env = self.create_file('.creep.env', b'{"default": {"connection": "file:///' + target.encode('utf-8') + b'"}}')
+
+        self.deploy('archive.tar', ['default'], environment=env)
+
+        self.assert_file('target/item.bin', data)
 
     def test_target_deploy_multiple(self):
         self.create_directory('target')

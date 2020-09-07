@@ -5,6 +5,7 @@ from .action import Action
 from .definition import Definition
 from .environment import Environment
 from .revision import Revision
+from .source import Source
 
 import json
 import os
@@ -12,7 +13,7 @@ import shutil
 import tempfile
 
 
-def _read_json(base_path, json_or_path, default):
+def _read_json(json_or_path, default):
     # Input looks like a JSON object
     if json_or_path[0:1] == '{':
         contents = json_or_path
@@ -20,8 +21,8 @@ def _read_json(base_path, json_or_path, default):
 
     # Otherwise consider it as a file path
     else:
-        file_name = json_or_path[0:1] == '@' and json_or_path[1:] or json_or_path
-        file_path = os.path.join(base_path, file_name)
+        file_path = json_or_path[0:1] == '@' and json_or_path[1:] or json_or_path
+        file_name = os.path.basename(file_path)
 
         if not os.path.isfile(file_path):
             return (default, None)
@@ -39,72 +40,73 @@ class Application:
         self.logger = logger
         self.yes = yes
 
-    def run(self, base_path, names, append_files, remove_files, rev_from, rev_to):
-        # Ensure base directory is valid
-        if not os.path.isdir(base_path):
-            self.logger.error('Base directory "{0}" doesn\'t exist.'.format(base_path))
+    def run(self, source_path, names, append_files, remove_files, rev_from, rev_to):
+        with Source(source_path) as source:
+            # Ensure source directory is valid
+            if source is None:
+                self.logger.error('Source path "{0}" doesn\'t exist.'.format(source_path))
 
-            return False
+                return False
 
-        ignores = []
+            ignores = []
 
-        # Load environment configuration from command line argument or file
-        (environment_config, environment_name) = _read_json(base_path, self.environment, None)
+            # Load environment configuration from command line argument or file
+            (environment_config, environment_name) = _read_json(self.environment, None)
 
-        if environment_config is None:
-            self.logger.error('No environment file "{0}" found in base directory.'.format(self.environment))
+            if environment_config is None:
+                self.logger.error('No environment file "{0}" found in base directory.'.format(self.environment))
 
-            return False
+                return False
 
-        if environment_name is not None:
-            ignores.append(environment_name)
+            if environment_name is not None:
+                ignores.append(environment_name)
 
-        environment = Environment(self.logger, environment_config)
+            environment = Environment(self.logger, environment_config)
 
-        # Read definition configuration from command line argument or file
-        (definition_config, definition_name) = _read_json(base_path, self.definition, {})
+            # Read definition configuration from command line argument or file
+            (definition_config, definition_name) = _read_json(self.definition, {})
 
-        if definition_name is not None:
-            ignores.append(definition_name)
+            if definition_name is not None:
+                ignores.append(definition_name)
 
-        definition = Definition(self.logger, definition_config, ignores)
+            definition = Definition(self.logger, definition_config, ignores)
 
-        # Expand location names
-        if len(names) < 1:
-            names.append('default')
-        elif len(names) == 1 and names[0] == '*':
-            names = environment.locations.keys()
+            # Expand location names
+            if len(names) < 1:
+                names.append('default')
+            elif len(names) == 1 and names[0] == '*':
+                names = environment.locations.keys()
 
-        # Deploy to selected locations
-        ok = True
+            # Deploy to selected locations
+            ok = True
 
-        for name in names:
-            location = environment.get_location(name)
+            for name in names:
+                location = environment.get_location(name)
 
-            if location is None:
-                self.logger.warning('There is no location "{0}" in your environment file.'.format(name))
-
-                continue
-
-            if location.connection is not None:
-                self.logger.info('Deploying to location "{0}"...'.format(name))
-
-                if not self.__sync(base_path, definition, location, name, append_files, remove_files, rev_from, rev_to):
-                    ok = False
+                if location is None:
+                    self.logger.warning('There is no location "{0}" in your environment file.'.format(name))
 
                     continue
 
-            for cascade_path, cascade_names in location.cascades.items():
-                full_path = os.path.join(base_path, cascade_path)
+                if location.connection is not None:
+                    self.logger.info('Deploying to location "{0}"...'.format(name))
 
-                self.logger.info('Cascading to path "{0}"...'.format(full_path))
-                self.logger.enter()
+                    if not self.__sync(source, definition, location, name, append_files, remove_files, rev_from, rev_to):
+                        ok = False
 
-                ok = self.run(full_path, cascade_names, [], [], None, None) and ok
+                        continue
 
-                self.logger.leave()
+                for cascade_path, cascade_names in location.cascades.items():
+                    full_path = os.path.join(source, cascade_path)
 
-        return ok
+                    self.logger.info('Cascading to path "{0}"...'.format(full_path))
+                    self.logger.enter()
+
+                    ok = self.run(full_path, cascade_names, [], [], None, None) and ok
+
+                    self.logger.leave()
+
+            return ok
 
     def __prompt(self, question):
         if self.yes:
@@ -122,10 +124,10 @@ class Application:
 
             self.logger.warning('Invalid answer')
 
-    def __sync(self, base_path, definition, location, name, append_files, remove_files, rev_from, rev_to):
+    def __sync(self, source, definition, location, name, append_files, remove_files, rev_from, rev_to):
         # Build repository tracker from current directory and file deployer from location connection string
-        deployer = factory.create_deployer(self.logger, location.connection, location.options, base_path)
-        tracker = factory.create_tracker(self.logger, definition.tracker, definition.options, base_path)
+        deployer = factory.create_deployer(self.logger, location.connection, location.options, source)
+        tracker = factory.create_tracker(self.logger, definition.tracker, definition.options, source)
 
         if deployer is None or tracker is None:
             return False
@@ -133,8 +135,8 @@ class Application:
         # Read revision file
         if not location.local:
             data = deployer.read(self.logger, location.state)
-        elif os.path.exists(os.path.join(base_path, location.state)):
-            data = open(os.path.join(base_path, location.state), 'rb').read()
+        elif os.path.exists(os.path.join(source, location.state)):
+            data = open(os.path.join(source, location.state), 'rb').read()
         else:
             data = ''
 
@@ -161,7 +163,7 @@ class Application:
                 return True
 
         if rev_to is None:
-            rev_to = tracker.current(base_path)
+            rev_to = tracker.current(source)
 
             if rev_to is None:
                 self.logger.error(
@@ -176,7 +178,7 @@ class Application:
 
         try:
             # Append actions from revision diff
-            tracker_actions = tracker.diff(self.logger, base_path, work_path, rev_from, rev_to)
+            tracker_actions = tracker.diff(self.logger, source, work_path, rev_from, rev_to)
 
             if tracker_actions is None:
                 return False
@@ -185,11 +187,11 @@ class Application:
             manual_actions = []
 
             for append in location.append_files + append_files:
-                full_path = os.path.join(base_path, append)
+                full_path = os.path.join(source, append)
 
                 if os.path.isdir(full_path):
                     for (dirpath, dirnames, filenames) in os.walk(full_path):
-                        parent_path = os.path.relpath(dirpath, base_path)
+                        parent_path = os.path.relpath(dirpath, source)
 
                         manual_actions.extend(
                             (Action(os.path.join(parent_path, filename), Action.ADD) for filename in filenames))
@@ -199,15 +201,15 @@ class Application:
                     self.logger.warning('Can\'t append missing file "{0}".'.format(append))
 
             for action in manual_actions:
-                if not path.duplicate(os.path.join(base_path, action.path), work_path, action.path):
+                if not path.duplicate(os.path.join(source, action.path), work_path, action.path):
                     self.logger.warning('Can\'t copy file "{0}".'.format(action.path))
 
             for remove in location.remove_files + remove_files:
-                full_path = os.path.join(base_path, remove)
+                full_path = os.path.join(source, remove)
 
                 if os.path.isdir(full_path):
                     for (dirpath, dirnames, filenames) in os.walk(full_path):
-                        parent_path = os.path.relpath(dirpath, base_path)
+                        parent_path = os.path.relpath(dirpath, source)
 
                         manual_actions.extend(
                             (Action(os.path.join(parent_path, filename), Action.DEL) for filename in filenames))
@@ -250,7 +252,7 @@ class Application:
 
             # Update current revision (local mode)
             if location.local:
-                with open(os.path.join(base_path, location.state), 'wb') as file:
+                with open(os.path.join(source, location.state), 'wb') as file:
                     file.write(revision.serialize().encode('utf-8'))
 
         finally:
