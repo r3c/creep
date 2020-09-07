@@ -14,7 +14,11 @@ def main():
     parser = argparse.ArgumentParser(prog='Creep',
                                      description='Perform incremental deployment from workspace to remote directory.')
 
-    parser.add_argument('name', nargs='*', help='Deploy to specified named location (* = everywhere)')
+    parser.add_argument('source', nargs='?', help='Deployment source directory/file (e.g. "./workspace")')
+
+    parser.add_argument('names',
+                        nargs='*',
+                        help='Target location name (e.g. "production" ; use "*" to deploy to all locations)')
 
     parser.add_argument('-a',
                         '--append',
@@ -22,12 +26,6 @@ def main():
                         default=[],
                         help='Manually append file or directory to locations',
                         metavar='PATH')
-
-    parser.add_argument('-b',
-                        '--base',
-                        default='.',
-                        help='Use given path to workspace instead of current directory',
-                        metavar='DIR')
 
     parser.add_argument('-d',
                         '--definition',
@@ -89,8 +87,9 @@ def main():
 
     append = args.append + args.extra_append
     remove = args.remove + args.extra_remove
+    source = args.source or '.'
 
-    return not deployer.deploy(args.base, args.name, append, remove, args.rev_from, args.rev_to) and 1 or 0
+    return not deployer.deploy(source, args.names, append, remove, args.rev_from, args.rev_to) and 1 or 0
 
 
 if __name__ == '__main__':
