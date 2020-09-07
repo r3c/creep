@@ -75,7 +75,7 @@ class Application:
         elif len(names) == 1 and names[0] == '*':
             names = environment.locations.keys()
 
-        # Deploy to target locations
+        # Deploy to selected locations
         ok = True
 
         for name in names:
@@ -123,16 +123,16 @@ class Application:
             self.logger.warning('Invalid answer')
 
     def __sync(self, base_path, definition, location, name, append_files, remove_files, rev_from, rev_to):
-        # Build repository tracker from current directory and target from location connection string
-        target = factory.create_target(self.logger, location.connection, location.options, base_path)
+        # Build repository tracker from current directory and file deployer from location connection string
+        deployer = factory.create_deployer(self.logger, location.connection, location.options, base_path)
         tracker = factory.create_tracker(self.logger, definition.tracker, definition.options, base_path)
 
-        if target is None or tracker is None:
+        if deployer is None or tracker is None:
             return False
 
         # Read revision file
         if not location.local:
-            data = target.read(self.logger, location.state)
+            data = deployer.read(self.logger, location.state)
         elif os.path.exists(os.path.join(base_path, location.state)):
             data = open(os.path.join(base_path, location.state), 'rb').read()
         else:
@@ -228,15 +228,15 @@ class Application:
 
                 actions.append(Action(location.state, Action.ADD))
 
-            # Display processed actions using console target
+            # Display processed actions using console deployer
             if len(actions) < 1:
                 self.logger.info('No deployment required.')
 
                 return True
 
-            from .targets.console import ConsoleTarget
+            from .deployers.console import ConsoleDeployer
 
-            console = ConsoleTarget()
+            console = ConsoleDeployer()
             console.send(self.logger, work_path, actions)
 
             if not self.__prompt('Deploy? [Y/N]'):
@@ -245,7 +245,7 @@ class Application:
             # Execute processed actions after ordering them by precedence
             actions.sort(key=lambda action: (action.order(), action.path))
 
-            if not target.send(self.logger, work_path, actions):
+            if not deployer.send(self.logger, work_path, actions):
                 return False
 
             # Update current revision (local mode)

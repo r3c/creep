@@ -10,7 +10,7 @@ from ..action import Action
 from ..process import Process
 
 
-class SSHTarget:
+class SSHDeployer:
     def __init__(self, host, port, user, directory, options):
         extra = shlex.split(options.get('extra', ''))
         remote = str((user or os.getusername()) + '@' + (host or 'localhost'))
@@ -24,7 +24,7 @@ class SSHTarget:
         result = Process(self.tunnel + [command]).execute()
 
         if not result:
-            logger.warning('Couldn\'t read file \'{0}\' from SSH target.'.format(relative))
+            logger.warning('Couldn\'t read file \'{0}\' from SSH deployer.'.format(relative))
             logger.debug(result.err.decode('utf-8'))
 
             return None
@@ -54,7 +54,7 @@ class SSHTarget:
                 result = Process(self.tunnel + arguments).set_input(archive.read()).execute()
 
                 if not result:
-                    logger.warning('Couldn\'t push files to SSH target.')
+                    logger.warning('Couldn\'t push files to SSH deployer.')
                     logger.debug(result.err.decode('utf-8'))
 
                     return False
@@ -64,7 +64,7 @@ class SSHTarget:
                 result = Process(self.tunnel + ['sh']).set_input(commands.encode('utf-8')).execute()
 
                 if not result:
-                    logger.warning('Couldn\'t delete files from SSH target.')
+                    logger.warning('Couldn\'t delete files from SSH deployer.')
                     logger.debug(result.err.decode('utf-8'))
 
                     return False

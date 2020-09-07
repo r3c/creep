@@ -6,7 +6,7 @@ import shutil
 from .. import path
 
 
-class FileTarget:
+class FileDeployer:
     def __init__(self, directory):
         self.directory = directory
 

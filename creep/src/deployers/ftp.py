@@ -9,7 +9,7 @@ from ..action import Action
 from .. import path
 
 
-class FTPTarget:
+class FTPDeployer:
     def __init__(self, host, port, user, password, directory, options):
         self.directory = directory
         self.host = host or 'localhost'

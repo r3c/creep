@@ -32,7 +32,7 @@ def _wrap_or_none(value, callback):
     return None
 
 
-def create_target(logger, connection, options, base_path):
+def create_deployer(logger, connection, options, base_path):
     # FIXME: should use urllib.parse [url-parse]
     match = re.match('([+0-9A-Za-z]+)://(?:([^#/:@]+)(?::([^#/@]+))?@)?(?:([^#/:]+)(?::([0-9]+))?)?(?:/([^#]*))?',
                      connection)
@@ -53,22 +53,22 @@ def create_target(logger, connection, options, base_path):
         if password is not None or port is not None or user is not None:
             logger.warning('Connection string for "file" scheme shouldn\'t contain any port, user or password.')
 
-        from .targets.file import FileTarget
+        from .deployers.file import FileDeployer
 
-        return FileTarget(os.path.join(base_path, directory))
+        return FileDeployer(os.path.join(base_path, directory))
 
     if scheme == 'ftp':
-        from .targets.ftp import FTPTarget
+        from .deployers.ftp import FTPDeployer
 
-        return FTPTarget(host, port, user, password, directory, options)
+        return FTPDeployer(host, port, user, password, directory, options)
 
     if scheme == 'ssh':
         if password is not None:
             logger.warning('Connection string for "ssh" scheme shouldn\'t contain any password.')
 
-        from .targets.ssh import SSHTarget
+        from .deployers.ssh import SSHDeployer
 
-        return SSHTarget(host, port, user, directory, options)
+        return SSHDeployer(host, port, user, directory, options)
 
     # No known scheme recognized
     logger.error('Unsupported scheme in connection string "{0}".'.format(connection))

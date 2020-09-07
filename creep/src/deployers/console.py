@@ -3,9 +3,9 @@
 from ..action import Action
 
 
-class ConsoleTarget:
+class ConsoleDeployer:
     def read(self, logger, relative):
-        raise Exception('can\'t read from console target')
+        raise Exception('can\'t read from console deployer')
 
     def send(self, logger, work, actions):
         for action in actions:
