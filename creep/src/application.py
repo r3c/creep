@@ -15,22 +15,22 @@ import tempfile
 
 def _read_json(base_directory, json_or_path, default):
     # Input looks like a JSON object
-    if json_or_path[0:1] == '{':
-        contents = json_or_path
-        file_name = None
+    if isinstance(json_or_path, dict):
+        return (json_or_path, None)
+
+    # Input looks like a JSON object serialized as a string
+    if json_or_path[0:1] == '{' and json_or_path[-1:] == '}':
+        return (json.loads(json_or_path), None)
 
     # Otherwise consider it as a file path
-    else:
-        file_path = os.path.join(base_directory, json_or_path[0:1] == '@' and json_or_path[1:] or json_or_path)
-        file_name = os.path.basename(file_path)
+    file_path = os.path.join(base_directory, json_or_path[0:1] == '@' and json_or_path[1:] or json_or_path)
+    file_name = os.path.basename(file_path)
 
-        if not os.path.isfile(file_path):
-            return (default, None)
+    if not os.path.isfile(file_path):
+        return (default, None)
 
-        with open(file_path, 'rb') as file:
-            contents = file.read().decode('utf-8')
-
-    return (json.loads(contents), file_name)
+    with open(file_path, 'rb') as file:
+        return (json.load(file), file_name)
 
 
 class Application:

@@ -107,6 +107,86 @@ class ApplicationTester(unittest.TestCase):
 
         self.assert_file('target/aaa', b'a')
 
+    def test_target_cascade_inline(self):
+        self.create_directory('target1')
+        self.create_directory('target2')
+        self.create_file(
+            'source1/.creep.env', b'''{
+                "default": {
+                    "connection": "file:///../target1",
+                    "cascades": [{
+                        "definition": {
+                            "modifiers": [
+                                {
+                                    "pattern": "^c$",
+                                    "filter": ""
+                                }
+                            ]
+                        },
+                        "environment": {
+                            "default": {
+                                "connection": "file:///../target2"
+                            }
+                        },
+                        "path": "../source2"
+                    }]
+                }
+            }''')
+        self.create_file('source1/a', b'a')
+        self.create_file('source2/b', b'b')
+        self.create_file('source2/c', b'c')
+
+        self.deploy('source1', ['default'])
+
+        self.assert_file('target1/a', b'a')
+        self.assert_file('target2/b', b'b')
+        self.assert_file('target2/c', None)
+
+    def test_target_cascade_reference(self):
+        self.create_directory('target1')
+        self.create_directory('target2')
+        self.create_file(
+            'source1/.creep.env', b'''{
+                "default": {
+                    "connection": "file:///../target1",
+                    "cascades": [{
+                        "definition": "../source2_def",
+                        "environment": "../source2_env",
+                        "path": "../source2"
+                    }]
+                }
+            }''')
+        self.create_file('source2_def', b'{"modifiers": [{"pattern": "^c$", "filter": ""}]}')
+        self.create_file('source2_env', b'{"default": {"connection": "file:///../target2"}}')
+        self.create_file('source1/a', b'a')
+        self.create_file('source2/b', b'b')
+        self.create_file('source2/c', b'c')
+
+        self.deploy('source1', ['default'])
+
+        self.assert_file('target1/a', b'a')
+        self.assert_file('target2/b', b'b')
+        self.assert_file('target2/c', None)
+
+    def test_target_cascade_string(self):
+        self.create_directory('target1')
+        self.create_directory('target2')
+        self.create_file(
+            'source1/.creep.env', b'''{
+                "default": {
+                    "connection": "file:///../target1",
+                    "cascades": ["../source2"]
+                }
+            }''')
+        self.create_file('source2/.creep.env', b'{"default": {"connection": "file:///../target2"}}')
+        self.create_file('source1/a', b'a')
+        self.create_file('source2/b', b'b')
+
+        self.deploy('source1', ['default'])
+
+        self.assert_file('target1/a', b'a')
+        self.assert_file('target2/b', b'b')
+
     def test_target_deploy_then_append(self):
         self.create_directory('target')
         self.create_file('source/.creep.env', b'{"default": {"connection": "file:///../target"}}')
