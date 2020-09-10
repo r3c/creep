@@ -8,13 +8,14 @@ import sys
 sys.path.append(os.path.dirname(__file__))
 
 from src import Application, Logger
+from src.environment import EnvironmentTarget
 
 
 def main():
     parser = argparse.ArgumentParser(prog='Creep',
                                      description='Perform incremental deployment from workspace to remote directory.')
 
-    parser.add_argument('source', nargs='?', help='Deployment source directory/file (e.g. "./workspace")')
+    parser.add_argument('source', nargs='?', default='.', help='Deployment source directory/file (e.g. "./workspace")')
 
     parser.add_argument('names',
                         nargs='*',
@@ -83,13 +84,13 @@ def main():
     args = parser.parse_args()
     logger = Logger.build(args.level)
 
-    application = Application(logger, args.definition, args.environment, args.yes)
+    application = Application(logger, args.yes)
+    target = EnvironmentTarget(args.definition, args.environment, args.names, args.source)
 
     append = args.append + args.extra_append
     remove = args.remove + args.extra_remove
-    source = args.source or '.'
 
-    return not application.run(source, args.names, append, remove, args.rev_from, args.rev_to) and 1 or 0
+    return not application.run('', target, append, remove, args.rev_from, args.rev_to) and 1 or 0
 
 
 if __name__ == '__main__':

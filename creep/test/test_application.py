@@ -11,6 +11,7 @@ import unittest
 sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 
 from src import Application, Logger
+from src.environment import EnvironmentTarget
 
 
 class ApplicationTester(unittest.TestCase):
@@ -56,14 +57,15 @@ class ApplicationTester(unittest.TestCase):
         if os.path.exists(path):
             os.remove(path)
 
-    def deploy(self, source_path, locations, definition=None, environment=None):
+    def deploy(self, source_path, location_names, definition=None, environment=None):
         source_path = os.path.join(self.directory.name, source_path)
         definition = os.path.join(source_path, '.creep.def') if definition is None else definition
         environment = os.path.join(source_path, '.creep.env') if environment is None else environment
 
-        application = Application(Logger.build(logging.WARNING), definition, environment, True)
+        application = Application(Logger.build(logging.WARNING), True)
+        target = EnvironmentTarget(definition, environment, location_names, source_path)
 
-        self.assertTrue(application.run(source_path, locations, [], [], None, None))
+        self.assertTrue(application.run(source_path, target, [], [], None, None))
 
     def test_config_definition_file(self):
         self.create_directory('target')
