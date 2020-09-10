@@ -30,7 +30,9 @@ def _read_json(base_directory, json_or_path, default):
         return (default, None)
 
     with open(file_path, 'rb') as file:
-        return (json.load(file), file_name)
+        contents = file.read().decode('utf-8')
+
+        return (json.loads(contents), file_name)
 
 
 class Application:
