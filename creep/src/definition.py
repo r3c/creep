@@ -28,28 +28,11 @@ class DefinitionModifier:
 
 
 class Definition:
-    def __init__(self, logger, config, ignores):
-        modifiers = []
-
-        # Read modifiers from JSON configuration
-        for modifier in config.get('modifiers', []):
-            modify = _get_or_fallback(logger, modifier, 'modify', 'adapt')
-            filter = modifier.get('filter', None)
-            link = modifier.get('link', None)
-            rename = _get_or_fallback(logger, modifier, 'rename', 'name')
-
-            regex = re.compile(modifier['pattern'])
-
-            modifiers.append(DefinitionModifier(regex, filter, rename, modify, link))
-
-        # Append ignores specified in arguments
-        for ignore in ignores:
-            modifiers.append(DefinitionModifier(re.compile('^' + re.escape(ignore) + '$'), '', None, None, None))
-
+    def __init__(self, logger, modifiers, options, trackers):
         self.logger = logger
         self.modifiers = modifiers
-        self.options = config.get('options', {})
-        self.tracker = _get_or_fallback(logger, config, 'tracker', 'source')
+        self.options = options
+        self.tracker = trackers
 
     def apply(self, work, path, type, used):
         # Ensure we don't process a file already scanned
@@ -136,3 +119,40 @@ class Definition:
             return None
 
         return result.out
+
+
+def load(logger, config, ignores):
+    # Read modifiers from JSON configuration
+    modifiers_config = config.get('modifiers', [])
+
+    if not isinstance(modifiers_config, list):
+        logger.error('Property "modifiers" must be an array in definition file.')
+
+        return None
+
+    modifiers = []
+
+    for modifier_config in modifiers_config:
+        pattern = modifier_config.get('pattern', None)
+
+        if pattern is None:
+            logger.error('Missing property "pattern" for modifier in definition file.')
+
+            return None
+
+        modify = _get_or_fallback(logger, modifier_config, 'modify', 'adapt')
+        filter = modifier_config.get('filter', None)
+        link = modifier_config.get('link', None)
+        rename = _get_or_fallback(logger, modifier_config, 'rename', 'name')
+        regex = re.compile(pattern)
+
+        modifiers.append(DefinitionModifier(regex, filter, rename, modify, link))
+
+    # Append ignores specified in arguments
+    for ignore in ignores:
+        modifiers.append(DefinitionModifier(re.compile('^' + re.escape(ignore) + '$'), '', None, None, None))
+
+    options = config.get('options', {})
+    tracker = _get_or_fallback(logger, config, 'tracker', 'source')
+
+    return Definition(logger, modifiers, options, tracker)

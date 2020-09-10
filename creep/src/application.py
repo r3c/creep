@@ -2,7 +2,7 @@
 
 from . import factory, path
 from .action import Action
-from .definition import Definition
+from .definition import load as load_definition
 from .environment import load as load_environment
 from .revision import Revision
 from .source import Source
@@ -73,7 +73,10 @@ class Application:
             if definition_name is not None:
                 ignores.append(definition_name)
 
-            definition = Definition(self.logger, definition_config, ignores)
+            definition = load_definition(self.logger, definition_config, ignores)
+
+            if definition is None:
+                return False
 
             # Expand location names
             if len(target.locations) < 1:
