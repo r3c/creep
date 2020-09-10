@@ -32,6 +32,11 @@ class Environment:
 
 
 def __load_location(logger, config, location_name):
+    if not isinstance(config, dict):
+        logger.error('Location must be an object in environment file, location "{0}".'.format(location_name))
+
+        return None
+
     connection = config.get('connection', None)
 
     if connection is None:
@@ -78,11 +83,23 @@ def __load_location(logger, config, location_name):
 
 
 def __load_target(logger, config, location_name):
-    path = config.get('path', None)
+    if isinstance(config, dict):
+        path = config.get('path', None)
 
-    if path is None:
+        if path is None:
+            logger.error(
+                'Missing property "path" in environment file, location "{0}", cascade definition'.format(location_name))
+
+            return None
+
+    elif isinstance(config, str):
+        path = config
+        config = {}
+
+    else:
         logger.error(
-            'Missing property "path" in environment file, location "{0}", cascade definition'.format(location_name))
+            'Cascade definition must be either a string or an object in environment file, location "{0}"'.format(
+                location_name))
 
         return None
 
@@ -94,6 +111,11 @@ def __load_target(logger, config, location_name):
 
 
 def load(logger, config):
+    if not isinstance(config, dict):
+        logger.error('Environment file root must be an object.')
+
+        return None
+
     locations = dict()
 
     for name, location_config in config.items():
