@@ -37,13 +37,6 @@ def __load_location(logger, config, location_name):
 
         return None
 
-    connection = config.get('connection', None)
-
-    if connection is None:
-        logger.error('Missing property "connection" in environment file, location "{0}".'.format(location_name))
-
-        return None
-
     subsidiaries = config.get('subsidiaries', None)
 
     if subsidiaries is not None:
@@ -74,6 +67,7 @@ def __load_location(logger, config, location_name):
         return None
 
     append_files = config.get('append_files', [])
+    connection = config.get('connection', None)
     local = config.get('local', False)
     options = config.get('options', {})
     remove_files = config.get('remove_files', [])
