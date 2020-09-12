@@ -56,8 +56,8 @@ class Application:
             (environment_config, environment_name) = _read_json(base_directory, target.environment, None)
 
             if environment_config is None:
-                self.logger.error('No environment file "{0}" found in directory "{1}".'.format(
-                    target.environment, source_path))
+                self.logger.error('No environment file "{0}" found.'.format(
+                    os.path.join(base_directory, target.environment)))
 
                 return False
 
