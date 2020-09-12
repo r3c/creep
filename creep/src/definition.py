@@ -150,7 +150,7 @@ def load(logger, config, ignores):
 
     # Append ignores specified in arguments
     for ignore in ignores:
-        modifiers.append(DefinitionModifier(re.compile('^' + re.escape(ignore) + '$'), None, None, None, None, ''))
+        modifiers.append(DefinitionModifier(re.compile('^' + re.escape(ignore) + '$'), None, None, None, 0o644, ''))
 
     options = config.get('options', {})
     tracker = _get_or_fallback(logger, config, 'tracker', 'source')
