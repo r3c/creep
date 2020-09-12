@@ -19,7 +19,8 @@ def _get_or_fallback(logger, source, key, obsolete):
 
 
 class DefinitionModifier:
-    def __init__(self, regex, filter, rename, modify, link):
+    def __init__(self, regex, rename, link, modify, chmod, filter):
+        self.chmod = chmod
         self.filter = filter
         self.link = link
         self.modify = modify
@@ -34,7 +35,7 @@ class Definition:
         self.options = options
         self.tracker = trackers
 
-    def apply(self, work, path, type, used):
+    def apply(self, base_directory, path, type, used):
         # Ensure we don't process a file already scanned
         path = os.path.normpath(path)
 
@@ -64,39 +65,41 @@ class Definition:
                 path = os.path.normpath(os.path.join(os.path.dirname(path), name))
 
                 if type == Action.ADD:
-                    os.rename(os.path.join(work, previous_path), os.path.join(work, path))
+                    os.rename(os.path.join(base_directory, previous_path), os.path.join(base_directory, path))
 
-                self.logger.debug('File \'{0}\' renamed to \'{1}\'.'.format(path, name))
+                self.logger.debug('File \'{0}\' renamed to \'{1}\'.'.format(previous_path, path))
 
-            if type == Action.ADD:
-                # Apply link command if any
-                if modifier.link is not None:
-                    out = self.run(work, path, modifier.link)
+            # Apply link command if any
+            if modifier.link is not None and type == Action.ADD:
+                out = self.run(base_directory, path, modifier.link)
 
-                    if out is not None:
-                        for link in out.decode('utf-8').splitlines():
-                            self.logger.debug('File \'{0}\' is linked to file \'{1}\'.'.format(path, link))
+                if out is not None:
+                    for link in out.decode('utf-8').splitlines():
+                        self.logger.debug('File \'{0}\' is linked to file \'{1}\'.'.format(path, link))
 
-                            actions.extend(self.apply(work, link, type, used))
-                    else:
-                        self.logger.warning('Command \'link\' on file \'{0}\' returned non-zero code.'.format(path))
+                        actions.extend(self.apply(base_directory, link, type, used))
+                else:
+                    self.logger.warning('Command \'link\' on file \'{0}\' returned non-zero code.'.format(path))
 
-                        type = Action.ERR
+                    type = Action.ERR
 
-                # Build output file using processing command if any
-                if modifier.modify is not None:
-                    out = self.run(work, path, modifier.modify)
+            # Build output file using processing command if any
+            if modifier.modify is not None and type == Action.ADD:
+                out = self.run(base_directory, path, modifier.modify)
 
-                    if out is not None:
-                        with open(os.path.join(work, path), 'wb') as file:
-                            file.write(out)
-                    else:
-                        self.logger.warning('Command \'modify\' on file \'{0}\' returned non-zero code.'.format(path))
+                if out is not None:
+                    with open(os.path.join(base_directory, path), 'wb') as file:
+                        file.write(out)
+                else:
+                    self.logger.warning('Command \'modify\' on file \'{0}\' returned non-zero code.'.format(path))
 
-                        type = Action.ERR
+                    type = Action.ERR
+
+            # Set file mode
+            os.chmod(os.path.join(base_directory, path), modifier.chmod)
 
             # Apply filtering command if any
-            if modifier.filter is not None and (modifier.filter == '' or self.run(work, path, modifier.filter) is None):
+            if modifier.filter is not None and (modifier.filter == '' or self.run(base_directory, path, modifier.filter) is None):
                 self.logger.debug('File \'{0}\' filtered out.'.format(path))
 
                 type = Action.NOP
@@ -109,8 +112,8 @@ class Definition:
         # No modifier matched, return unmodified input
         return [Action(path, type)]
 
-    def run(self, work, path, command):
-        result = Process(command.replace('{}', path)).set_directory(work).set_shell(True).execute()
+    def run(self, base_directory, path, command):
+        result = Process(command.replace('{}', path)).set_directory(base_directory).set_shell(True).execute()
 
         if not result:
             return None
@@ -137,17 +140,17 @@ def load(logger, config, ignores):
 
             return None
 
-        modify = _get_or_fallback(logger, modifier_config, 'modify', 'adapt')
+        chmod = int(modifier_config.get('chmod', '0644'), 8)
         filter = modifier_config.get('filter', None)
         link = modifier_config.get('link', None)
+        modify = _get_or_fallback(logger, modifier_config, 'modify', 'adapt')
         rename = _get_or_fallback(logger, modifier_config, 'rename', 'name')
-        regex = re.compile(pattern)
 
-        modifiers.append(DefinitionModifier(regex, filter, rename, modify, link))
+        modifiers.append(DefinitionModifier(re.compile(pattern), rename, link, modify, chmod, filter))
 
     # Append ignores specified in arguments
     for ignore in ignores:
-        modifiers.append(DefinitionModifier(re.compile('^' + re.escape(ignore) + '$'), '', None, None, None))
+        modifiers.append(DefinitionModifier(re.compile('^' + re.escape(ignore) + '$'), None, None, None, None, ''))
 
     options = config.get('options', {})
     tracker = _get_or_fallback(logger, config, 'tracker', 'source')

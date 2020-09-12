@@ -297,38 +297,47 @@ regular expression patterns:
 
 Creep evaluates modifiers in sequence and one file can only match one modifier:
 evaluation stops after the first matched one. For each file matching a modifier,
-associated actions (if any) are applied on it. Available modifier actions are
-listed below:
+associated properties (if any) are applied to it. Available modifier properties
+are listed below by execution order:
 
-- `filter` action specifies a shell command to be executed, where special `{}`
-  token is replaced by an absolute path to the file being matched. If this
-  command returns a non-zero result file won't be sent to remote location.
-  - In the example above, the `false` command is used to exclude files with name
-    ending with `.dist` from deployment.
-  - Empty string value can also be used to always exclude files. It's equivalent
-    to the `false` command used in the example above but has better portability.
-- `rename` action specifies a new name for file and supports back references on
-  the regular expression used in `pattern`.
+- `rename` property specifies a new name for file and supports `\\n` back
+  references on groups from the regular expression used in `pattern` (remember
+  backslashes must be escaped in JSON).
   - In the example above, files ending with `.less` will have their extension
     changed to `.css`: the back reference `\\1` captured original file name
     without extension in associated pattern.
-- `modify` action specifies a shell command (similar to `filter` action).
-  Standard output of this command will replace content of the file before it's
-  sent to remote location.
-  - In the example above, executable `uglifyjs` is called to minify JavaScript
-    files (ending with `.js`).
-  - Note presence of a rule which matches files with name ending with `.min.js`:
-    it doesn't specify any action but prevents the `\.js$` rule from being
-    triggered for files that are already minified.
-- `link` action specifies a shell command similar to the `adapt` one but is
-  expected to return a path (relative to deployment directory) to all files that
-  should be sent whenever matched ones are matched.
+- `link` property specifies a shell command expected to output path to all
+  files that must also be included in the deployment along with matched file.
+  Command can contain special `{}` token which will be replaced by absolute
+  path to matched file. Output must contain one path per line and each path
+  must be relative to source directory.
   - In the example above, a command using `find` and `grep` is used to list all
     files referencing currently ones, so they're also sent to remote location
     whenever the file they reference is changed.
   - Note the regular expression could have been more specific, but the point is
     to be sure to include all changed files when deploying ; a few false
-    positives will just cause harmless extra synchronizations.
+    positives will just cause a harmless extra cost due to additional files
+	being deployed while not changed.
+- `modify` property specifies a shell command expected to output replacement
+  contents for the file being sent to remote location. It supports `{}` token
+  similar to the `link` property above.
+  - In the example above, executable `uglifyjs` is called to minify JavaScript
+    files (ending with `.js`) ; `uglifyjs` prints result to standard output,
+	which is then used to overwrite contents of matched JavaScript files.
+  - Note presence of a rule which matches files with name ending with `.min.js`:
+    it doesn't specify any action but prevents the `\.js$` rule from being
+    triggered for files that are already minified.
+- `chmod` property specifies the file permission to be applied in octal format.
+   Mode "0644" (read/write for owner, read-only for everyone else) is used if
+   this property is not set.
+- `filter` property specifies a shell command used to decide whether file
+  should be excluded from deployment or not. It supports `{}` token similar to
+  the `link` property above. If command execution returns a non-zero exit code
+  then file won't be sent to remote location.
+  - In the example above, the `false` command is used to exclude files with name
+    ending with `.dist` from deployment.
+  - Empty string value can also be used to always exclude files. It's equivalent
+    to the `false` command used in the example above but has better portability.
 
 Creep always appends two modifiers to filter to exclude environment and
 definition files from deployments. You shouldn't need to change this behavior,

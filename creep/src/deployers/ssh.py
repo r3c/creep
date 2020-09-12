@@ -41,13 +41,7 @@ class SSHDeployer:
             with tarfile.open(fileobj=archive, mode='w') as tar:
                 for action in actions:
                     if action.type == Action.ADD:
-                        path = os.path.join(work, action.path)
-
-                        info = tar.gettarinfo(path, action.path)
-                        info.mode = int('0644', 8)
-
-                        with open(path, 'rb') as file:
-                            tar.addfile(info, file)
+                        tar.add(os.path.join(work, action.path), action.path)
 
                         to_add = True
                     elif action.type == Action.DEL:
