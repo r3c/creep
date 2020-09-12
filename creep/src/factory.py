@@ -1,11 +1,6 @@
 #!/usr/bin/python3
 
-# Hack for Python 2 + 3 compatibility
-try:
-    from urllib.parse import unquote_plus
-except ImportError:
-    from urllib import unquote_plus
-
+from urllib.parse import unquote_plus
 from . import path
 
 import os

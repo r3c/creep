@@ -271,10 +271,3 @@ class Application:
         self.logger.info('Deployment done.')
 
         return True
-
-
-# Hack for Python 2 + 3 compatibility
-try:
-    input = raw_input
-except NameError:
-    pass
