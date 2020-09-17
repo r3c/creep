@@ -16,11 +16,9 @@ class EnvironmentLocation:
 
 
 class EnvironmentTarget:
-    def __init__(self, definition, environment, locations, path):
+    def __init__(self, definition, locations):
         self.definition = definition
-        self.environment = environment
         self.locations = locations
-        self.path = path
 
 
 class Environment:
@@ -31,20 +29,23 @@ class Environment:
         return self.locations.get(name, None)
 
 
+def __get_or_fallback(logger, source, key, obsolete, default_value):
+    if obsolete in source:
+        logger.warning('Deprecated property "{0}" should be replaced by "{1}" in environment file.'.format(
+            obsolete, key))
+
+        return source[obsolete]
+
+    return source.get(key, default_value)
+
+
 def __load_location(logger, config, location_name):
     if not isinstance(config, dict):
         logger.error('Location must be an object in environment file, location "{0}".'.format(location_name))
 
         return None
 
-    subsidiaries = config.get('subsidiaries', None)
-
-    if subsidiaries is not None:
-        logger.warning(
-            'Deprecated property "subsidiaries" should be replaced by "cascades" in environment file, location "{0}".'.
-            format(location_name))
-
-    cascades_config = config.get('cascades', subsidiaries or [])
+    cascades_config = __get_or_fallback(logger, config, 'cascades', 'subsidiaries', [])
 
     if isinstance(cascades_config, dict):
         logger.warning(
@@ -52,8 +53,8 @@ def __load_location(logger, config, location_name):
                 location_name))
 
         cascades_config = [{
-            'locations': isinstance(name, list) and name or [name],
-            'path': path
+            'definition': path,
+            'locations': isinstance(name, list) and name or [name]
         } for path, name in cascades_config.items()]
 
     elif not isinstance(cascades_config, list):
@@ -76,32 +77,31 @@ def __load_location(logger, config, location_name):
     return EnvironmentLocation(append_files, cascades, connection, local, options, remove_files, state)
 
 
-def __load_target(logger, config, location_name):
+def __load_target(logger, config, default_location_name):
     if isinstance(config, dict):
-        path = config.get('path', None)
+        definition = __get_or_fallback(logger, config, 'definition', 'origin', None)
 
-        if path is None:
+        if definition is None:
             logger.error(
-                'Missing property "path" in environment file, location "{0}", cascade definition'.format(location_name))
+                'Missing property "definition" in environment file, location "{0}", cascade declaration'.format(
+                    default_location_name))
 
             return None
 
     elif isinstance(config, str):
-        path = config
+        definition = config
         config = {}
 
     else:
         logger.error(
-            'Cascade definition must be either a string or an object in environment file, location "{0}"'.format(
-                location_name))
+            'Cascade declaration must be either a string or an object in environment file, location "{0}"'.format(
+                default_location_name))
 
         return None
 
-    definition = config.get('definition', os.path.join(path, '.creep.def'))
-    environment = config.get('environment', os.path.join(path, '.creep.env'))
-    locations = config.get('locations', [location_name])
+    locations = config.get('locations', [default_location_name])
 
-    return EnvironmentTarget(definition, environment, locations, path)
+    return EnvironmentTarget(definition, locations)
 
 
 def load(logger, config):

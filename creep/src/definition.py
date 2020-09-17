@@ -8,14 +8,14 @@ from .action import Action
 from .process import Process
 
 
-def _get_or_fallback(logger, source, key, obsolete):
-    fallback = source.get(obsolete, None)
-
-    if fallback is not None:
+def __get_or_fallback(logger, source, key, obsolete, default_value):
+    if obsolete in source:
         logger.warning('Deprecated property "{0}" should be replaced by "{1}" in definition file.'.format(
             obsolete, key))
 
-    return source.get(key, fallback)
+        return source[obsolete]
+
+    return source.get(key, default_value)
 
 
 class DefinitionModifier:
@@ -29,11 +29,13 @@ class DefinitionModifier:
 
 
 class Definition:
-    def __init__(self, logger, modifiers, options, trackers):
+    def __init__(self, logger, origin, environment, tracker, options, modifiers):
+        self.environment = environment
         self.logger = logger
         self.modifiers = modifiers
         self.options = options
-        self.tracker = trackers
+        self.origin = origin
+        self.tracker = tracker
 
     def apply(self, base_directory, path, type, used):
         # Ensure we don't process a file already scanned
@@ -99,7 +101,8 @@ class Definition:
             os.chmod(os.path.join(base_directory, path), modifier.chmod)
 
             # Apply filtering command if any
-            if modifier.filter is not None and (modifier.filter == '' or self.run(base_directory, path, modifier.filter) is None):
+            if modifier.filter is not None and (modifier.filter == ''
+                                                or self.run(base_directory, path, modifier.filter) is None):
                 self.logger.debug('File \'{0}\' filtered out.'.format(path))
 
                 type = Action.NOP
@@ -143,8 +146,8 @@ def load(logger, config, ignores):
         chmod = int(modifier_config.get('chmod', '0644'), 8)
         filter = modifier_config.get('filter', None)
         link = modifier_config.get('link', None)
-        modify = _get_or_fallback(logger, modifier_config, 'modify', 'adapt')
-        rename = _get_or_fallback(logger, modifier_config, 'rename', 'name')
+        modify = __get_or_fallback(logger, modifier_config, 'modify', 'adapt', None)
+        rename = __get_or_fallback(logger, modifier_config, 'rename', 'name', None)
 
         modifiers.append(DefinitionModifier(re.compile(pattern), rename, link, modify, chmod, filter))
 
@@ -152,7 +155,9 @@ def load(logger, config, ignores):
     for ignore in ignores:
         modifiers.append(DefinitionModifier(re.compile('^' + re.escape(ignore) + '$'), None, None, None, 0o644, ''))
 
+    environment = config.get('environment', '.')
     options = config.get('options', {})
-    tracker = _get_or_fallback(logger, config, 'tracker', 'source')
+    origin = config.get('origin', '.')
+    tracker = __get_or_fallback(logger, config, 'tracker', 'source', None)
 
-    return Definition(logger, modifiers, options, tracker)
+    return Definition(logger, origin, environment, tracker, options, modifiers)

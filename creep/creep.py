@@ -15,8 +15,6 @@ def main():
     parser = argparse.ArgumentParser(prog='Creep',
                                      description='Perform incremental deployment from workspace to remote directory.')
 
-    parser.add_argument('source', nargs='?', default='.', help='Deployment source directory/file (e.g. "./workspace")')
-
     parser.add_argument('names',
                         nargs='*',
                         help='Target location name (e.g. "production" ; use "*" to deploy to all locations)')
@@ -30,14 +28,8 @@ def main():
 
     parser.add_argument('-d',
                         '--definition',
-                        default='.creep.def',
-                        help='Read definition configuration from specified file or JSON string',
-                        metavar='FILE/JSON')
-
-    parser.add_argument('-e',
-                        '--environment',
-                        default='.creep.env',
-                        help='Read environment configuration from specified file or JSON string',
+                        default='.',
+                        help='Read definition configuration from specified file, directory or JSON string',
                         metavar='FILE/JSON')
 
     parser.add_argument('-f',
@@ -85,12 +77,12 @@ def main():
     logger = Logger.build(args.level)
 
     application = Application(logger, args.yes)
-    target = EnvironmentTarget(args.definition, args.environment, args.names, args.source)
+    target = EnvironmentTarget(args.definition, args.names)
 
     append = args.append + args.extra_append
     remove = args.remove + args.extra_remove
 
-    return not application.run('', target, append, remove, args.rev_from, args.rev_to) and 1 or 0
+    return not application.run('.', target, append, remove, args.rev_from, args.rev_to) and 1 or 0
 
 
 if __name__ == '__main__':

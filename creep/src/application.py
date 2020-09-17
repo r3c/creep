@@ -13,26 +13,32 @@ import shutil
 import tempfile
 
 
-def _read_json(base_directory, json_or_path, default):
+def _join_path(a, b):
+    return os.path.normpath(os.path.join(a, b))
+
+
+def _read_json(base_directory, json_or_path, default_file_name, default_value):
     # Input looks like a JSON object
     if isinstance(json_or_path, dict):
-        return (json_or_path, None)
+        return (json_or_path, _join_path(base_directory, default_file_name), False)
 
     # Input looks like a JSON object serialized as a string
     if json_or_path[0:1] == '{' and json_or_path[-1:] == '}':
-        return (json.loads(json_or_path), None)
+        return (json.loads(json_or_path), _join_path(base_directory, default_file_name), False)
 
     # Otherwise consider it as a file path
-    file_path = os.path.join(base_directory, json_or_path[0:1] == '@' and json_or_path[1:] or json_or_path)
-    file_name = os.path.basename(file_path)
+    file_path = _join_path(base_directory, json_or_path[0:1] == '@' and json_or_path[1:] or json_or_path)
+
+    if os.path.isdir(file_path):
+        file_path = _join_path(file_path, default_file_name)
 
     if not os.path.isfile(file_path):
-        return (default, None)
+        return (default_value, file_path, False)
 
     with open(file_path, 'rb') as file:
         contents = file.read().decode('utf-8')
 
-        return (json.loads(contents), file_name)
+        return (json.loads(contents), file_path, True)
 
 
 class Application:
@@ -41,43 +47,47 @@ class Application:
         self.yes = yes
 
     def run(self, base_directory, target, append_files, remove_files, rev_from, rev_to):
-        source_path = os.path.join(base_directory, target.path)
+        ignores = []
 
-        with Source(source_path) as source:
+        # Read definition configuration from JSON or file
+        def_directory = base_directory
+
+        (def_config, def_path, def_ignore) = _read_json(def_directory, target.definition, '.creep.def', {})
+
+        if def_ignore:
+            ignores.append(def_path)
+
+        definition = load_definition(self.logger, def_config, ignores)
+
+        if definition is None:
+            return False
+
+        # Load environment configuration from JSON or file
+        env_directory = _join_path(base_directory, os.path.dirname(def_path))
+
+        (env_config, env_path, env_ignore) = _read_json(env_directory, definition.environment, '.creep.env', None)
+
+        if env_config is None:
+            self.logger.error('Environment file "{0}" not found.'.format(env_path))
+
+            return False
+
+        if env_ignore:
+            ignores.append(env_path)
+
+        environment = load_environment(self.logger, env_config)
+
+        if environment is None:
+            return False
+
+        # Compute origin path relative to definition file
+        origin_path = _join_path(os.path.dirname(def_path), definition.origin)
+
+        with Source(origin_path) as source_path:
             # Ensure source directory is valid
-            if source is None:
-                self.logger.error('Source path "{0}" doesn\'t exist.'.format(source_path))
+            if source_path is None:
+                self.logger.error('Origin path "{0}" doesn\'t exist.'.format(origin_path))
 
-                return False
-
-            ignores = []
-
-            # Load environment configuration from command line argument or file
-            (environment_config, environment_name) = _read_json(base_directory, target.environment, None)
-
-            if environment_config is None:
-                self.logger.error('No environment file "{0}" found.'.format(
-                    os.path.join(base_directory, target.environment)))
-
-                return False
-
-            if environment_name is not None:
-                ignores.append(environment_name)
-
-            environment = load_environment(self.logger, environment_config)
-
-            if environment is None:
-                return False
-
-            # Read definition configuration from command line argument or file
-            (definition_config, definition_name) = _read_json(base_directory, target.definition, {})
-
-            if definition_name is not None:
-                ignores.append(definition_name)
-
-            definition = load_definition(self.logger, definition_config, ignores)
-
-            if definition is None:
                 return False
 
             # Expand location names
@@ -95,24 +105,23 @@ class Application:
                 location = environment.get_location(location_name)
 
                 if location is None:
-                    self.logger.warning('There is no location "{0}" in your environment file.'.format(location_name))
+                    self.logger.warning('Environment file "{0}" has no location "{0}".'.format(env_path, location_name))
 
                     continue
 
                 if location.connection is not None:
                     self.logger.info('Deploying to location "{0}"...'.format(location_name))
-
-                    if not self.__sync(source, definition, location, location_name, append_files, remove_files,
+                    if not self.__sync(source_path, definition, location, location_name, append_files, remove_files,
                                        rev_from, rev_to):
                         ok = False
 
                         continue
 
                 for cascade in location.cascades:
-                    self.logger.info('Cascading to path "{0}"...'.format(cascade.path))
+                    self.logger.info('Cascading to definition "{0}"...'.format(cascade.definition))
                     self.logger.enter()
 
-                    ok = self.run(source, cascade, [], [], None, None) and ok
+                    ok = self.run(source_path, cascade, [], [], None, None) and ok
 
                     self.logger.leave()
 
@@ -145,8 +154,8 @@ class Application:
         # Read revision file
         if not location.local:
             data = deployer.read(self.logger, location.state)
-        elif os.path.exists(os.path.join(source, location.state)):
-            data = open(os.path.join(source, location.state), 'rb').read()
+        elif os.path.exists(_join_path(source, location.state)):
+            data = open(_join_path(source, location.state), 'rb').read()
         else:
             data = ''
 
@@ -197,32 +206,32 @@ class Application:
             manual_actions = []
 
             for append in location.append_files + append_files:
-                full_path = os.path.join(source, append)
+                full_path = _join_path(source, append)
 
                 if os.path.isdir(full_path):
                     for (dirpath, dirnames, filenames) in os.walk(full_path):
                         parent_path = os.path.relpath(dirpath, source)
 
                         manual_actions.extend(
-                            (Action(os.path.join(parent_path, filename), Action.ADD) for filename in filenames))
+                            (Action(_join_path(parent_path, filename), Action.ADD) for filename in filenames))
                 elif os.path.isfile(full_path):
                     manual_actions.append(Action(append, Action.ADD))
                 else:
                     self.logger.warning('Can\'t append missing file "{0}".'.format(append))
 
             for action in manual_actions:
-                if not path.duplicate(os.path.join(source, action.path), work_path, action.path):
+                if not path.duplicate(_join_path(source, action.path), work_path, action.path):
                     self.logger.warning('Can\'t copy file "{0}".'.format(action.path))
 
             for remove in location.remove_files + remove_files:
-                full_path = os.path.join(source, remove)
+                full_path = _join_path(source, remove)
 
                 if os.path.isdir(full_path):
                     for (dirpath, dirnames, filenames) in os.walk(full_path):
                         parent_path = os.path.relpath(dirpath, source)
 
                         manual_actions.extend(
-                            (Action(os.path.join(parent_path, filename), Action.DEL) for filename in filenames))
+                            (Action(_join_path(parent_path, filename), Action.DEL) for filename in filenames))
                 else:
                     manual_actions.append(Action(remove, Action.DEL))
 
@@ -235,7 +244,7 @@ class Application:
 
             # Update current revision (remote mode)
             if rev_from != rev_to and not location.local:
-                with open(os.path.join(work_path, location.state), 'wb') as file:
+                with open(_join_path(work_path, location.state), 'wb') as file:
                     file.write(revision.serialize().encode('utf-8'))
 
                 actions.append(Action(location.state, Action.ADD))
@@ -262,7 +271,7 @@ class Application:
 
             # Update current revision (local mode)
             if location.local:
-                with open(os.path.join(source, location.state), 'wb') as file:
+                with open(_join_path(source, location.state), 'wb') as file:
                     file.write(revision.serialize().encode('utf-8'))
 
         finally:

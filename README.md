@@ -6,12 +6,10 @@ Creep README file
 Overview
 --------
 
-Creep is an incremental deploy tool. It allows delta update from any Git
-repository or a regular directory to a FTP or SSH remote server. Its purpose is
-to deploy applications where files needed on remote servers (e.g. production)
-match local files, that is to say when "deployment" actually means "copy with
-some optional files preprocessing". For example it works best for HTML/CSS/JS
-websites or server technologies like PHP.
+Creep is an incremental deploy tool. It allows delta update from a local source
+(directory, Git repository or archive) to a FTP or SSH remote server. Its
+purpose is to deploy applications by incrementally copying local files to
+remote servers (e.g. production) with optional pre-processing.
 
 Incremental deployment means Creep keeps track of deployed files on all remote
 locations. Only modified files are transferred between two deployments. This
@@ -46,12 +44,12 @@ first project.
 Quick start
 -----------
 
-First go to the directory you want to deploy, e.g. the `src` folder of some
+First go to the directory you want to deploy, e.g. the `dist` folder of some
 project. It can be inside a Git repository or just be a regular folder, Creep
 will select a suitable default configuration either way. Create a new
 `.creep.env` file inside this directory with following JSON content:
 
-    $ cd path/to/your/project
+    $ cd path/to/your/dist/directory
     $ cat > .creep.env << EOF
 	{
 		"default": {
@@ -60,45 +58,29 @@ will select a suitable default configuration either way. Create a new
 	}
     EOF
 
-Mind the quadruple slash in `file:////tmp/creep-quickstart` value. Once file is
-saved, create the directory and execute creep with no parameter:
+Mind the quadruple slash in `file:////tmp/creep-quickstart` value, we'll see
+later why this is required. Once file is saved create the directory and execute
+Creep with no parameter:
 
 	$ mkdir /tmp/creep-quickstart
 	$ creep
 
-Creep will tell you about deploying this project for the first time and ask you
+Creep will notice you're deploying this project for the first time and ask you
 to confirm. Answer `y` to continue. It will display the full list of files in
 your project (by scanning file system or Git history) then ask you again to
 confirm. Enter `y` and Creep will deploy your project to directory
 `/tmp/creep-quickstart`.
 
-Now if you try to execute creep again you'll see a message saying no action is
-required. Deployment location now contains an up-to-date version of your project
-and Creep saved this information. Try to change some files (and `git commit`
-them if you were using Git) then execute the command again. This time Creep will
-send only the file you changed rather than the full project.
+Now if you try to execute Creep again you'll see a message saying no action is
+required. This is because deployment location now contains an up-to-date
+version of your project and Creep saved this information. Try to change some
+files (and `git commit` them if you were using Git) then execute the command
+again. This time Creep will copy only the file you changed rather than the
+full project.
 
 This basic example shows how to incrementally deploy a project to some local
 directory. Next sections will show how to deploy to remote locations (FTP or
 SSH) and register several deployment configurations.
-
-
-Source path
------------
-
-When running `creep` without any argument, Creep will take current working
-directory as your source and synchronize its contents to target location.
-
-You can also specify source as an argument when calling Creep to change this
-behavior and use any directory you want as source:
-
-    $ creep ../my-sources/
-
-Creep also supports deploying from an archive file instead of a directory. If
-first argument is a file Creep will consider it as an archive and extract its
-contents before deploying it:
-
-    $ creep my-sources.zip
 
 
 Environment file
@@ -107,8 +89,8 @@ Environment file
 As we saw during quick start steps, Creep reads deployment location(s) from a
 file called an _environment_ file. It contains one or more named location(s)
 pointing to destinations you want to deploy to. By default Creep will search
-for an environment file named `.creep.env` in current directory, but you can
-override this command line option `-e` (see help).
+for an environment file named `.creep.env` in current directory, but we'll see
+later how this can be customized.
 
 Environment configuration file uses JSON format and looks like this:
 
@@ -125,21 +107,21 @@ Environment configuration file uses JSON format and looks like this:
 	}
 
 Elements in the root object specify an available deployment location. Each one
-must have at least a `connection` string containing protocol, address,
+must have at least a `connection` string specifying protocol, address,
 credentials and/or path. Read details below for more information about supported
 protocols.
 
 Once environment configuration file is ready you can start using Creep. Just
-type `creep <source> <name>` where `<name>` is name of a configured location.
-You can also specify multiple locations
-(`creep <source> <name1> <name2> ...`) or use `*` to deploy everywhere
-(`creep <source> '*'`, don't forget to escape the `*` if you're running
-Creep from within a shell). If you don't specify any name Creep will deploy to
-location named `default`.
+type `creep <name>` where `<name>` is name of a configured location to initiate
+a deployment to this location. You can also specify multiple locations by
+running `creep <name1> <name2> ...` or use special location `*` to deploy
+everywhere (`creep '*'`, don't forget to escape the `*` if you're running Creep
+from within a shell). If you don't specify a name Creep will deploy to location
+name `default`.
 
-Creep will then fetch last deployed revision from remote location and compute
-difference. When you deploy for the first time there is no last deployed
-revision so Creep will perform a full deploy. After each successful
+When invoked Creep will fetch last deployed revision from remote location and
+compute difference. When you deploy for the first time there is no last
+deployed revision so Creep will perform a full deploy. After each successful
 deployment it will save revision to remote location in a `.creep.rev` file.
 
 Storing revision information on remote location keeps related data altogether
@@ -191,17 +173,13 @@ and available options:
   - String option `extra` can be used to pass parameters to SSH command as shown
     in example above.
 
-Path is relative by default in all protocols. Start your path by a slash `/`
-character to specify an absolute path, e.g. `file:////opt/myproject`.
+Path is relative by default in all protocols. Add an extra slash `/` before
+your path to specify an absolute path, e.g. `file:////opt/myproject` or
+`ssh://user@host//opt/myproject`.
 
-Note that environment files only describe information about external locations
-and may contain passwords. For those reasons they should be excluded from your
+Note that environment files describe information about external locations and
+may contain passwords. For those reasons they should be excluded from your
 versionning and kept only on machines performing deployments.
-
-If you prefer not to write environment configuration as files, you can also
-pass it as a JSON string using `-e` command line option:
-
-	creep -e '{"default": {"connection": "ftp://me:password@host"}}'
 
 It's often convenient to keep the environment file at the top-level of the
 directory you want to deploy, so that running `creep` without any argument will
@@ -343,8 +321,8 @@ Creep always appends two modifiers to filter to exclude environment and
 definition files from deployments. You shouldn't need to change this behavior,
 but you may do so by adding explicit modifiers matching them.
 
-Like for environment configuration you can also specify definition
-configuration as a JSON string instead of file using `-d` command line option:
+You can also specify definition configuration as a JSON string instead of file
+using `-d` command line option:
 
 	creep -d '{"tracker": "hash"}'
 
