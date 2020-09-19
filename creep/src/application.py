@@ -77,9 +77,7 @@ class Application:
             definition.ignore(os.path.basename(env_path))
 
         # Compute origin path relative to definition file
-        origin_path = _join_path(def_directory, definition.origin)
-
-        with Source(origin_path) as source_path:
+        with Source(def_directory, definition.origin) as source_path:
             # Ensure source directory is valid
             if source_path is None:
                 self.logger.error('Origin path "{0}" doesn\'t exist.'.format(origin_path))

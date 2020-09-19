@@ -1,45 +1,81 @@
 import os
 import shutil
 import tempfile
+import urllib.parse
+import urllib.request
 
 
 class Source:
     """
-    Source is a wrapper over the path deployment is initiated from. This path can be either:
+    Source is a wrapper over the path deployment is initiated from. This path can be:
     * A regular directory on file system
     * An archive file that will be extracted before deployment
-    Archive mode also supports an optional sub-path within the archive, e.g. "archive.zip:usr/bin/"
+    * An HTTP or HTTPS URL to an archive file
+    Archive and URL formats also supports an optional sub-path within the archive e.g. "archive.zip#usr/bin/"
     """
-    def __init__(self, path):
-        self.directory = None
-        self.path = path
+    def __init__(self, base_directory, relative_path):
+        self.base_directory = base_directory
+        self.cleaners = []
+        self.relative_path = relative_path
 
     def __enter__(self):
-        parts = self.path.split(':', 1)
+        result = urllib.parse.urlparse(self.relative_path)
 
-        if os.path.isdir(parts[0]):
-            self.directory = None
+        # Locate path on disk or download source
+        if result.scheme == '' or result.scheme == 'file':
+            origin = os.path.join(self.base_directory, result.path)
+            scope = result.fragment
 
-            return parts[0]
+        elif result.scheme == 'http' or result.scheme == 'https':
+            download = tempfile.NamedTemporaryFile(suffix=os.path.splitext(result.path)[1])
 
-        elif os.path.isfile(parts[0]):
-            self.directory = tempfile.TemporaryDirectory()
+            self.cleaners.append(lambda: download.close())
+
+            origin = download.name
+            scope = result.fragment
 
             try:
-                name = self.directory.name
-
-                shutil.unpack_archive(parts[0], name)
-
-                return os.path.join(name, parts[1]) if len(parts) > 1 else name
+                with urllib.request.urlopen(result._replace(fragment='').geturl()) as file:
+                    download.write(file.read())
             except:
-                self.directory.cleanup()
-                self.directory = None
+                self.__exit__(None, None, None)
 
                 raise
+
+            download.seek(0)
+
+        else:
+            self.__exit__(None, None, None)
+
+            raise ValueError('origin has unsupported scheme "{0}"'.format(result.scheme))
+
+        # Extract archive or open directory
+        if os.path.isdir(origin):
+            if scope != '':
+                self.__exit__(None, None, None)
+
+                raise ValueError('no sub-path can be specified when origin is a directory')
+
+            return origin
+
+        elif os.path.isfile(origin):
+            directory = tempfile.TemporaryDirectory()
+
+            self.cleaners.append(lambda: directory.cleanup())
+
+            try:
+                shutil.unpack_archive(origin, directory.name)
+            except:
+                self.__exit__(None, None, None)
+
+                raise
+
+            return os.path.normpath(os.path.join(directory.name, scope))
 
         return None
 
     def __exit__(self, type, value, traceback):
-        if self.directory is not None:
-            self.directory.cleanup()
-            self.directory = None
+        for cleaner in self.cleaners:
+            cleaner()
+
+        self.cleaners = []

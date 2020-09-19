@@ -307,7 +307,7 @@ class ApplicationTester(unittest.TestCase):
 
         target = self.create_directory('target')
 
-        self.create_file('.creep.def', b'{"origin": "archive.tar:remove"}')
+        self.create_file('.creep.def', b'{"origin": "archive.tar#remove"}')
         self.create_file('.creep.env', b'{"default": {"connection": "file:///' + target.encode('utf-8') + b'"}}')
 
         self.deploy('.', ['default'])
@@ -335,6 +335,19 @@ class ApplicationTester(unittest.TestCase):
         self.deploy('source', ['default'])
 
         self.assert_file('target/test', b'Hello, World!')
+
+    def test_deploy_url(self):
+        target = self.create_directory('target')
+
+        self.create_file(
+            '.creep.def', b'''{
+                "origin": "https://gist.github.com/r3c/2004ebb0763a02b5945287f3dfa2e3e2/archive/003650e2639b49edc8c4ff6eb20e0931edb547dc.zip#2004ebb0763a02b5945287f3dfa2e3e2-003650e2639b49edc8c4ff6eb20e0931edb547dc"
+            }''')
+        self.create_file('.creep.env', b'{"default": {"connection": "file:///' + target.encode('utf-8') + b'"}}')
+
+        self.deploy('.', ['default'])
+
+        self.assert_file('target/filename', b'test')
 
 
 if __name__ == '__main__':
