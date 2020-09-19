@@ -115,6 +115,10 @@ class Definition:
         # No modifier matched, return unmodified input
         return [Action(path, type)]
 
+    def ignore(self, filename):
+        self.modifiers.append(
+            DefinitionModifier(re.compile('^' + re.escape(filename) + '$'), None, None, None, 0o644, ''))
+
     def run(self, base_directory, path, command):
         result = Process(command.replace('{}', path)).set_directory(base_directory).set_shell(True).execute()
 
@@ -124,7 +128,7 @@ class Definition:
         return result.out
 
 
-def load(logger, config, ignores):
+def load(logger, config):
     # Read modifiers from JSON configuration
     modifiers_config = config.get('modifiers', [])
 
@@ -150,10 +154,6 @@ def load(logger, config, ignores):
         rename = __get_or_fallback(logger, modifier_config, 'rename', 'name', None)
 
         modifiers.append(DefinitionModifier(re.compile(pattern), rename, link, modify, chmod, filter))
-
-    # Append ignores specified in arguments
-    for ignore in ignores:
-        modifiers.append(DefinitionModifier(re.compile('^' + re.escape(ignore) + '$'), None, None, None, 0o644, ''))
 
     environment = config.get('environment', '.')
     options = config.get('options', {})

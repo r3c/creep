@@ -155,6 +155,32 @@ class ApplicationTester(unittest.TestCase):
         self.assert_file('target2/b', b'b')
         self.assert_file('target2/c', None)
 
+    def test_target_cascade_of_cascade(self):
+        self.create_directory('target')
+        self.create_file(
+            'source/.creep.env', b'''{
+                "default": {
+                    "cascades": ["a"]
+                }
+            }''')
+        self.create_file(
+            'source/a/.creep.env', b'''{
+                "default": {
+                    "cascades": ["b"]
+                }
+            }''')
+        self.create_file(
+            'source/a/b/.creep.env', b'''{
+                "default": {
+                    "connection": "file:///../../../target"
+                }
+            }''')
+        self.create_file('source/a/b/c', b'c')
+
+        self.deploy('source', ['default'])
+
+        self.assert_file('target/c', b'c')
+
     def test_target_cascade_reference(self):
         self.create_directory('target1')
         self.create_directory('target2')

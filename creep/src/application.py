@@ -47,41 +47,37 @@ class Application:
         self.yes = yes
 
     def run(self, base_directory, target, append_files, remove_files, rev_from, rev_to):
-        ignores = []
-
         # Read definition configuration from JSON or file
-        def_directory = base_directory
+        (def_config, def_path, def_ignore) = _read_json(base_directory, target.definition, '.creep.def', {})
 
-        (def_config, def_path, def_ignore) = _read_json(def_directory, target.definition, '.creep.def', {})
-
-        if def_ignore:
-            ignores.append(def_path)
-
-        definition = load_definition(self.logger, def_config, ignores)
+        definition = load_definition(self.logger, def_config)
 
         if definition is None:
             return False
 
-        # Load environment configuration from JSON or file
-        env_directory = _join_path(base_directory, os.path.dirname(def_path))
+        if def_ignore:
+            definition.ignore(os.path.basename(def_path))
 
-        (env_config, env_path, env_ignore) = _read_json(env_directory, definition.environment, '.creep.env', None)
+        def_directory = os.path.dirname(def_path)
+
+        # Load environment configuration from JSON or file
+        (env_config, env_path, env_ignore) = _read_json(def_directory, definition.environment, '.creep.env', None)
 
         if env_config is None:
             self.logger.error('Environment file "{0}" not found.'.format(env_path))
 
             return False
 
-        if env_ignore:
-            ignores.append(env_path)
-
         environment = load_environment(self.logger, env_config)
 
         if environment is None:
             return False
 
+        if env_ignore:
+            definition.ignore(os.path.basename(env_path))
+
         # Compute origin path relative to definition file
-        origin_path = _join_path(os.path.dirname(def_path), definition.origin)
+        origin_path = _join_path(def_directory, definition.origin)
 
         with Source(origin_path) as source_path:
             # Ensure source directory is valid
