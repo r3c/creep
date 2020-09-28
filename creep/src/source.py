@@ -27,22 +27,20 @@ class Source:
             scope = result.fragment
 
         elif result.scheme == 'http' or result.scheme == 'https':
-            download = tempfile.NamedTemporaryFile(suffix=os.path.splitext(result.path)[1])
-
-            self.cleaners.append(lambda: download.close())
-
-            origin = download.name
+            # https://stackoverflow.com/questions/23212435/permission-denied-to-write-to-my-temporary-file
+            origin = os.path.join(tempfile.gettempdir(), os.urandom(24).hex() + '.' + os.path.splitext(result.path)[1])
             scope = result.fragment
 
+            self.cleaners.append(lambda: os.remove(origin))
+
             try:
-                with urllib.request.urlopen(result._replace(fragment='').geturl()) as file:
-                    download.write(file.read())
+                with urllib.request.urlopen(result._replace(fragment='').geturl()) as input_file:
+                    with open(origin, 'wb') as output_file:
+                        output_file.write(input_file.read())
             except:
                 self.__exit__(None, None, None)
 
                 raise
-
-            download.seek(0)
 
         else:
             self.__exit__(None, None, None)

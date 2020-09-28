@@ -1,6 +1,7 @@
 #!/usr/bin/python3
 
 import io
+import json
 import logging
 import os
 import sys
@@ -12,6 +13,10 @@ sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 
 from src import Application, Logger
 from src.environment import EnvironmentTarget
+
+
+def _get_json(obj):
+    return json.dumps(obj).encode('utf-8')
 
 
 class ApplicationTester(unittest.TestCase):
@@ -65,8 +70,8 @@ class ApplicationTester(unittest.TestCase):
 
     def test_config_definition_directory(self):
         self.create_directory('target')
-        self.create_file('source/.creep.def', b'{"environment": "."}')
-        self.create_file('source/.creep.env', b'{"default": {"connection": "file:///../target"}}')
+        self.create_file('source/.creep.def', _get_json({"environment": "."}))
+        self.create_file('source/.creep.env', _get_json({"default": {"connection": "file:///../target"}}))
         self.create_file('source/aaa', b'a')
 
         self.deploy('source', ['default'])
@@ -75,8 +80,8 @@ class ApplicationTester(unittest.TestCase):
 
     def test_config_definition_file(self):
         self.create_directory('target')
-        self.create_file('source/.creep.def', b'{"environment": ".test.env"}')
-        self.create_file('source/.test.env', b'{"default": {"connection": "file:///../target"}}')
+        self.create_file('source/.creep.def', _get_json({"environment": ".test.env"}))
+        self.create_file('source/.test.env', _get_json({"default": {"connection": "file:///../target"}}))
         self.create_file('source/aaa', b'a')
 
         self.deploy('source/.creep.def', ['default'])
@@ -85,7 +90,7 @@ class ApplicationTester(unittest.TestCase):
 
     def test_config_definition_inline(self):
         self.create_directory('target')
-        self.create_file('.creep.env', b'{"default": {"connection": "file:///../target"}}')
+        self.create_file('.creep.env', _get_json({"default": {"connection": "file:///../target"}}))
         self.create_file('source/aaa', b'a')
 
         self.deploy('{"origin": "source"}', ['default'])
@@ -94,8 +99,8 @@ class ApplicationTester(unittest.TestCase):
 
     def test_config_definition_modifier(self):
         self.create_directory('target')
-        self.create_file('source/.creep.def', b'{"modifiers": [{"pattern": "^bbb$", "filter": ""}]}')
-        self.create_file('source/.creep.env', b'{"default": {"connection": "file:///../target"}}')
+        self.create_file('source/.creep.def', _get_json({"modifiers": [{"pattern": "^bbb$", "filter": ""}]}))
+        self.create_file('source/.creep.env', _get_json({"default": {"connection": "file:///../target"}}))
         self.create_file('source/aaa', b'a')
         self.create_file('source/bbb', b'b')
 
@@ -106,7 +111,7 @@ class ApplicationTester(unittest.TestCase):
 
     def test_config_environment_file(self):
         self.create_directory('target')
-        self.create_file('source/.creep.env', b'{"default": {"connection": "file:///../target"}}')
+        self.create_file('source/.creep.env', _get_json({"default": {"connection": "file:///../target"}}))
         self.create_file('source/aaa', b'a')
 
         self.deploy('source', ['default'])
@@ -115,7 +120,12 @@ class ApplicationTester(unittest.TestCase):
 
     def test_config_environment_inline(self):
         self.create_directory('target')
-        self.create_file('source/.creep.def', b'{"environment": {"default": {"connection": "file:///../target"}}}')
+        self.create_file('source/.creep.def',
+                         _get_json({"environment": {
+                             "default": {
+                                 "connection": "file:///../target"
+                             }
+                         }}))
         self.create_file('source/aaa', b'a')
 
         self.deploy('source', ['default'])
@@ -126,9 +136,11 @@ class ApplicationTester(unittest.TestCase):
         self.create_directory('target1')
         self.create_directory('target2')
         self.create_file(
-            'source1/.creep.env', b'''{
+            'source1/.creep.env',
+            _get_json({
                 "default": {
-                    "connection": "file:///../target1",
+                    "connection":
+                    "file:///../target1",
                     "cascades": [{
                         "definition": {
                             "environment": {
@@ -144,7 +156,7 @@ class ApplicationTester(unittest.TestCase):
                         }
                     }]
                 }
-            }''')
+            }))
         self.create_file('source1/a', b'a')
         self.create_file('source2/b', b'b')
         self.create_file('source2/c', b'c')
@@ -157,24 +169,9 @@ class ApplicationTester(unittest.TestCase):
 
     def test_target_cascade_of_cascade(self):
         self.create_directory('target')
-        self.create_file(
-            'source/.creep.env', b'''{
-                "default": {
-                    "cascades": ["a"]
-                }
-            }''')
-        self.create_file(
-            'source/a/.creep.env', b'''{
-                "default": {
-                    "cascades": ["b"]
-                }
-            }''')
-        self.create_file(
-            'source/a/b/.creep.env', b'''{
-                "default": {
-                    "connection": "file:///../../../target"
-                }
-            }''')
+        self.create_file('source/.creep.env', _get_json({"default": {"cascades": ["a"]}}))
+        self.create_file('source/a/.creep.env', _get_json({"default": {"cascades": ["b"]}}))
+        self.create_file('source/a/b/.creep.env', _get_json({"default": {"connection": "file:///../../../target"}}))
         self.create_file('source/a/b/c', b'c')
 
         self.deploy('source', ['default'])
@@ -185,23 +182,24 @@ class ApplicationTester(unittest.TestCase):
         self.create_directory('target1')
         self.create_directory('target2')
         self.create_file(
-            'source1/.creep.env', b'''{
-                "default": {
-                    "connection": "file:///../target1",
-                    "cascades": [{
-                        "definition": "../source2_def"
-                    }]
-                }
-            }''')
+            'source1/.creep.env',
+            _get_json({"default": {
+                "connection": "file:///../target1",
+                "cascades": [{
+                    "definition": "../source2_def"
+                }]
+            }}))
         self.create_file(
-            'source2_def', b'''{
+            'source2_def',
+            _get_json({
                 "environment": "source2_env",
-                "modifiers": [
-                    {"pattern": "^c$", "filter": ""}
-                ],
+                "modifiers": [{
+                    "pattern": "^c$",
+                    "filter": ""
+                }],
                 "origin": "source2"
-            }''')
-        self.create_file('source2_env', b'{"default": {"connection": "file:///../target2"}}')
+            }))
+        self.create_file('source2_env', _get_json({"default": {"connection": "file:///../target2"}}))
         self.create_file('source1/a', b'a')
         self.create_file('source2/b', b'b')
         self.create_file('source2/c', b'c')
@@ -215,14 +213,12 @@ class ApplicationTester(unittest.TestCase):
     def test_target_cascade_string(self):
         self.create_directory('target1')
         self.create_directory('target2')
-        self.create_file(
-            'source1/.creep.env', b'''{
-                "default": {
-                    "connection": "file:///../target1",
-                    "cascades": ["../source2"]
-                }
-            }''')
-        self.create_file('source2/.creep.env', b'{"default": {"connection": "file:///../target2"}}')
+        self.create_file('source1/.creep.env',
+                         _get_json({"default": {
+                             "connection": "file:///../target1",
+                             "cascades": ["../source2"]
+                         }}))
+        self.create_file('source2/.creep.env', _get_json({"default": {"connection": "file:///../target2"}}))
         self.create_file('source1/a', b'a')
         self.create_file('source2/b', b'b')
 
@@ -233,7 +229,7 @@ class ApplicationTester(unittest.TestCase):
 
     def test_target_deploy_then_append(self):
         self.create_directory('target')
-        self.create_file('source/.creep.env', b'{"default": {"connection": "file:///../target"}}')
+        self.create_file('source/.creep.env', _get_json({"default": {"connection": "file:///../target"}}))
 
         # Create first file and deploy
         self.create_file('source/a/a', b'a')
@@ -248,7 +244,7 @@ class ApplicationTester(unittest.TestCase):
 
     def test_target_deploy_then_delete(self):
         self.create_directory('target')
-        self.create_file('source/.creep.env', b'{"default": {"connection": "file:///../target"}}')
+        self.create_file('source/.creep.env', _get_json({"default": {"connection": "file:///../target"}}))
 
         # Create files and deploy
         self.create_file('source/a/a', b'a')
@@ -264,7 +260,7 @@ class ApplicationTester(unittest.TestCase):
 
     def test_target_deploy_then_replace(self):
         self.create_directory('target')
-        self.create_file('source/.creep.env', b'{"default": {"connection": "file:///../target"}}')
+        self.create_file('source/.creep.env', _get_json({"default": {"connection": "file:///../target"}}))
 
         # Create file and deploy
         self.create_file('source/a/a', b'a')
@@ -288,8 +284,8 @@ class ApplicationTester(unittest.TestCase):
 
         target = self.create_directory('target')
 
-        self.create_file('.creep.def', b'{"origin": "archive.tar"}')
-        self.create_file('.creep.env', b'{"default": {"connection": "file:///' + target.encode('utf-8') + b'"}}')
+        self.create_file('.creep.def', _get_json({"origin": "archive.tar"}))
+        self.create_file('.creep.env', _get_json({"default": {"connection": "file:///" + target}}))
 
         self.deploy('.', ['default'])
 
@@ -307,8 +303,8 @@ class ApplicationTester(unittest.TestCase):
 
         target = self.create_directory('target')
 
-        self.create_file('.creep.def', b'{"origin": "archive.tar#remove"}')
-        self.create_file('.creep.env', b'{"default": {"connection": "file:///' + target.encode('utf-8') + b'"}}')
+        self.create_file('.creep.def', _get_json({"origin": "archive.tar#remove"}))
+        self.create_file('.creep.env', _get_json({"default": {"connection": "file:///" + target}}))
 
         self.deploy('.', ['default'])
 
@@ -316,7 +312,7 @@ class ApplicationTester(unittest.TestCase):
 
     def test_target_deploy_multiple(self):
         self.create_directory('target')
-        self.create_file('source/.creep.env', b'{"default": {"connection": "file:///../target"}}')
+        self.create_file('source/.creep.env', _get_json({"default": {"connection": "file:///../target"}}))
         self.create_file('source/aaa', b'a')
         self.create_file('source/b/bb', b'b')
         self.create_file('source/c/c/c', b'c')
@@ -329,7 +325,7 @@ class ApplicationTester(unittest.TestCase):
 
     def test_target_deploy_single(self):
         self.create_directory('target')
-        self.create_file('source/.creep.env', b'{"default": {"connection": "file:///../target"}}')
+        self.create_file('source/.creep.env', _get_json({"default": {"connection": "file:///../target"}}))
         self.create_file('source/test', b'Hello, World!')
 
         self.deploy('source', ['default'])
@@ -340,10 +336,12 @@ class ApplicationTester(unittest.TestCase):
         target = self.create_directory('target')
 
         self.create_file(
-            '.creep.def', b'''{
-                "origin": "https://gist.github.com/r3c/2004ebb0763a02b5945287f3dfa2e3e2/archive/003650e2639b49edc8c4ff6eb20e0931edb547dc.zip#2004ebb0763a02b5945287f3dfa2e3e2-003650e2639b49edc8c4ff6eb20e0931edb547dc"
-            }''')
-        self.create_file('.creep.env', b'{"default": {"connection": "file:///' + target.encode('utf-8') + b'"}}')
+            '.creep.def',
+            _get_json({
+                "origin":
+                "https://gist.github.com/r3c/2004ebb0763a02b5945287f3dfa2e3e2/archive/003650e2639b49edc8c4ff6eb20e0931edb547dc.zip#2004ebb0763a02b5945287f3dfa2e3e2-003650e2639b49edc8c4ff6eb20e0931edb547dc"
+            }))
+        self.create_file('.creep.env', _get_json({"default": {"connection": "file:///" + target}}))
 
         self.deploy('.', ['default'])
 
