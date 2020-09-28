@@ -7,8 +7,7 @@ import sys
 
 sys.path.append(os.path.dirname(__file__))
 
-from src import Application, Logger
-from src.environment import EnvironmentTarget
+from src import Application, Logger, load
 
 
 def main():
@@ -25,6 +24,12 @@ def main():
                         default=[],
                         help='Manually append file or directory to locations',
                         metavar='PATH')
+
+    parser.add_argument('-b',
+                        '--base-dir',
+                        default='.',
+                        help='Base directory used to resolve relative paths in definition file',
+                        metavar='DIR')
 
     parser.add_argument('-d',
                         '--definition',
@@ -77,12 +82,24 @@ def main():
     logger = Logger.build(args.level)
 
     application = Application(logger, args.yes)
-    target = EnvironmentTarget(args.definition, args.names)
+
+    if args.definition[0:1] == '{' and args.definition[-1:] == '}':
+        definition_config = json.loads(args.definition)
+    else:
+        definition_config = args.definition
+
+    definition = load(logger, args.base_dir, definition_config)
+
+    if definition is None:
+        return 1
 
     append = args.append + args.extra_append
     remove = args.remove + args.extra_remove
 
-    return not application.run('.', target, append, remove, args.rev_from, args.rev_to) and 1 or 0
+    if not application.run(definition, args.names, append, remove, args.rev_from, args.rev_to):
+        return 1
+
+    return 0
 
 
 if __name__ == '__main__':

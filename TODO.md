@@ -4,6 +4,7 @@ Creep TODO file
 TODO
 ----
 
+- Exclude ignored files from `hash` tracker revisions
 - Replace custom URL parsing by urllib.parse [url-parse]
 - Escape paths in FTP target [ftp-escape]
 

@@ -13,19 +13,21 @@ class Source:
     * An HTTP or HTTPS URL to an archive file
     Archive and URL formats also supports an optional sub-path within the archive e.g. "archive.zip#usr/bin/"
     """
-    def __init__(self, base_directory, relative_path):
-        self.base_directory = base_directory
+    def __init__(self, logger, path):
         self.cleaners = []
-        self.relative_path = relative_path
+        self.logger = logger
+        self.path = path
 
     def __enter__(self):
-        result = urllib.parse.urlparse(self.relative_path)
+        result = urllib.parse.urlparse(self.path)
 
-        # Locate path on disk or download source
-        if result.scheme == '' or result.scheme == 'file':
-            origin = os.path.join(self.base_directory, result.path)
+        # Locate path to file or directory on disk
+        if result.scheme == 'file':
+            # Hack: remove leading "/" to restore original path (see function `__load_origin`)
+            origin = result.path[1:]
             scope = result.fragment
 
+        # Download archive from HTTP endpoint
         elif result.scheme == 'http' or result.scheme == 'https':
             # https://stackoverflow.com/questions/23212435/permission-denied-to-write-to-my-temporary-file
             origin = os.path.join(tempfile.gettempdir(), os.urandom(24).hex() + '.' + os.path.splitext(result.path)[1])
@@ -43,19 +45,20 @@ class Source:
                 raise
 
         else:
+            self.logger.error('origin has unsupported scheme "{0}"'.format(result.scheme))
             self.__exit__(None, None, None)
 
-            raise ValueError('origin has unsupported scheme "{0}"'.format(result.scheme))
-
-        # Extract archive or open directory
+        # Open origin directory
         if os.path.isdir(origin):
             if scope != '':
+                self.logger.error('no sub-path can be specified when origin is a directory')
                 self.__exit__(None, None, None)
 
-                raise ValueError('no sub-path can be specified when origin is a directory')
+                return None
 
             return origin
 
+        # ...or extract from archive
         elif os.path.isfile(origin):
             directory = tempfile.TemporaryDirectory()
 
@@ -69,6 +72,8 @@ class Source:
                 raise
 
             return os.path.normpath(os.path.join(directory.name, scope))
+
+        self.logger.error('Origin path "{0}" is not a directory nor an archive file.'.format(origin))
 
         return None
 

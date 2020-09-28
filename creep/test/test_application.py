@@ -11,8 +11,7 @@ import unittest
 
 sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 
-from src import Application, Logger
-from src.environment import EnvironmentTarget
+from src import Application, Logger, load
 
 
 def _get_json(obj):
@@ -62,21 +61,13 @@ class ApplicationTester(unittest.TestCase):
         if os.path.exists(path):
             os.remove(path)
 
-    def deploy(self, definition, location_names):
-        application = Application(Logger.build(logging.WARNING), True)
-        target = EnvironmentTarget(definition, location_names)
+    def deploy(self, config, location_names):
+        logger = Logger.build(logging.WARNING)
+        application = Application(logger, True)
+        definition = load(logger, self.directory.name, config)
 
-        self.assertTrue(application.run(self.directory.name, target, [], [], None, None))
-
-    def test_config_definition_directory(self):
-        self.create_directory('target')
-        self.create_file('source/.creep.def', _get_json({"environment": "."}))
-        self.create_file('source/.creep.env', _get_json({"default": {"connection": "file:///../target"}}))
-        self.create_file('source/aaa', b'a')
-
-        self.deploy('source', ['default'])
-
-        self.assert_file('target/aaa', b'a')
+        self.assertFalse(definition is None)
+        self.assertTrue(application.run(definition, location_names, [], [], None, None))
 
     def test_config_definition_file(self):
         self.create_directory('target')
@@ -86,6 +77,8 @@ class ApplicationTester(unittest.TestCase):
 
         self.deploy('source/.creep.def', ['default'])
 
+        self.assert_file('target/.creep.def', None)
+        self.assert_file('target/.test.env', None)
         self.assert_file('target/aaa', b'a')
 
     def test_config_definition_inline(self):
@@ -93,7 +86,7 @@ class ApplicationTester(unittest.TestCase):
         self.create_file('.creep.env', _get_json({"default": {"connection": "file:///../target"}}))
         self.create_file('source/aaa', b'a')
 
-        self.deploy('{"origin": "source"}', ['default'])
+        self.deploy({"origin": "source"}, ['default'])
 
         self.assert_file('target/aaa', b'a')
 
@@ -106,6 +99,8 @@ class ApplicationTester(unittest.TestCase):
 
         self.deploy('source', ['default'])
 
+        self.assert_file('target/.creep.def', None)
+        self.assert_file('target/.creep.env', None)
         self.assert_file('target/aaa', b'a')
         self.assert_file('target/bbb')
 
@@ -116,6 +111,7 @@ class ApplicationTester(unittest.TestCase):
 
         self.deploy('source', ['default'])
 
+        self.assert_file('target/.creep.env', None)
         self.assert_file('target/aaa', b'a')
 
     def test_config_environment_inline(self):
@@ -130,31 +126,31 @@ class ApplicationTester(unittest.TestCase):
 
         self.deploy('source', ['default'])
 
+        self.assert_file('target/.creep.env', None)
         self.assert_file('target/aaa', b'a')
 
     def test_target_cascade_inline(self):
         self.create_directory('target1')
         self.create_directory('target2')
         self.create_file(
-            'source1/.creep.env',
+            'source1/.creep.def',
             _get_json({
-                "default": {
-                    "connection":
-                    "file:///../target1",
-                    "cascades": [{
-                        "definition": {
-                            "environment": {
-                                "default": {
-                                    "connection": "file:///../target2"
-                                }
-                            },
-                            "modifiers": [{
-                                "pattern": "^c$",
-                                "filter": ""
-                            }],
-                            "origin": "../source2"
+                "cascades": [{
+                    "environment": {
+                        "default": {
+                            "connection": "file:///../target2"
                         }
-                    }]
+                    },
+                    "modifiers": [{
+                        "pattern": "^c$",
+                        "filter": ""
+                    }],
+                    "origin": "../source2"
+                }],
+                "environment": {
+                    "default": {
+                        "connection": "file:///../target1"
+                    }
                 }
             }))
         self.create_file('source1/a', b'a')
@@ -169,26 +165,31 @@ class ApplicationTester(unittest.TestCase):
 
     def test_target_cascade_of_cascade(self):
         self.create_directory('target')
-        self.create_file('source/.creep.env', _get_json({"default": {"cascades": ["a"]}}))
-        self.create_file('source/a/.creep.env', _get_json({"default": {"cascades": ["b"]}}))
+        self.create_file('source/.creep.def', _get_json({"cascades": ["a"]}))
+        self.create_file('source/a/.creep.def', _get_json({"cascades": ["b"]}))
         self.create_file('source/a/b/.creep.env', _get_json({"default": {"connection": "file:///../../../target"}}))
         self.create_file('source/a/b/c', b'c')
 
         self.deploy('source', ['default'])
 
+        self.assert_file('target/.creep.def', None)
+        self.assert_file('target/a/.creep.def', None)
+        self.assert_file('target/a/b/.creep.env', None)
         self.assert_file('target/c', b'c')
 
     def test_target_cascade_reference(self):
         self.create_directory('target1')
         self.create_directory('target2')
         self.create_file(
-            'source1/.creep.env',
-            _get_json({"default": {
-                "connection": "file:///../target1",
-                "cascades": [{
-                    "definition": "../source2_def"
-                }]
-            }}))
+            'source1/.creep.def',
+            _get_json({
+                "cascades": ["../source2_def"],
+                "environment": {
+                    "default": {
+                        "connection": "file:///../target1"
+                    }
+                }
+            }))
         self.create_file(
             'source2_def',
             _get_json({
@@ -209,23 +210,6 @@ class ApplicationTester(unittest.TestCase):
         self.assert_file('target1/a', b'a')
         self.assert_file('target2/b', b'b')
         self.assert_file('target2/c', None)
-
-    def test_target_cascade_string(self):
-        self.create_directory('target1')
-        self.create_directory('target2')
-        self.create_file('source1/.creep.env',
-                         _get_json({"default": {
-                             "connection": "file:///../target1",
-                             "cascades": ["../source2"]
-                         }}))
-        self.create_file('source2/.creep.env', _get_json({"default": {"connection": "file:///../target2"}}))
-        self.create_file('source1/a', b'a')
-        self.create_file('source2/b', b'b')
-
-        self.deploy('source1', ['default'])
-
-        self.assert_file('target1/a', b'a')
-        self.assert_file('target2/b', b'b')
 
     def test_target_deploy_then_append(self):
         self.create_directory('target')
@@ -249,12 +233,19 @@ class ApplicationTester(unittest.TestCase):
         # Create files and deploy
         self.create_file('source/a/a', b'a')
         self.create_file('source/b/b', b'b')
+
         self.deploy('source', ['default'])
+
+        self.assert_file('target/.creep.env', None)
         self.assert_file('target/a/a', b'a')
+        self.assert_file('target/b/b', b'b')
 
         # Delete one file and deploy
         self.delete_file('source/b/b')
+
         self.deploy('source', ['default'])
+
+        self.assert_file('target/.creep.env', None)
         self.assert_file('target/a/a', b'a')
         self.assert_file('target/b/b')
 
@@ -264,12 +255,18 @@ class ApplicationTester(unittest.TestCase):
 
         # Create file and deploy
         self.create_file('source/a/a', b'a')
+
         self.deploy('source', ['default'])
+
+        self.assert_file('target/.creep.env', None)
         self.assert_file('target/a/a', b'a')
 
         # Replace file and deploy again
         self.create_file('source/a/a', b'aaa')
+
         self.deploy('source', ['default'])
+
+        self.assert_file('target/.creep.env', None)
         self.assert_file('target/a/a', b'aaa')
 
     def test_target_deploy_archive(self):
@@ -319,6 +316,7 @@ class ApplicationTester(unittest.TestCase):
 
         self.deploy('source', ['default'])
 
+        self.assert_file('target/.creep.env', None)
         self.assert_file('target/aaa', b'a')
         self.assert_file('target/b/bb', b'b')
         self.assert_file('target/c/c/c', b'c')
@@ -330,6 +328,7 @@ class ApplicationTester(unittest.TestCase):
 
         self.deploy('source', ['default'])
 
+        self.assert_file('target/.creep.env', None)
         self.assert_file('target/test', b'Hello, World!')
 
     def test_deploy_url(self):

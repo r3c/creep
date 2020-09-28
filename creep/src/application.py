@@ -2,8 +2,6 @@
 
 from . import factory, path
 from .action import Action
-from .definition import load as load_definition
-from .environment import load as load_environment
 from .revision import Revision
 from .source import Source
 
@@ -17,109 +15,55 @@ def _join_path(a, b):
     return os.path.normpath(os.path.join(a, b))
 
 
-def _read_json(base_directory, json_or_path, default_file_name, default_value):
-    # Input looks like a JSON object
-    if isinstance(json_or_path, dict):
-        return (json_or_path, _join_path(base_directory, default_file_name), False)
-
-    # Input looks like a JSON object serialized as a string
-    if json_or_path[0:1] == '{' and json_or_path[-1:] == '}':
-        return (json.loads(json_or_path), _join_path(base_directory, default_file_name), False)
-
-    # Otherwise consider it as a file path
-    file_path = _join_path(base_directory, json_or_path[0:1] == '@' and json_or_path[1:] or json_or_path)
-
-    if os.path.isdir(file_path):
-        file_path = _join_path(file_path, default_file_name)
-
-    if not os.path.isfile(file_path):
-        return (default_value, file_path, False)
-
-    with open(file_path, 'rb') as file:
-        contents = file.read().decode('utf-8')
-
-        return (json.loads(contents), file_path, True)
-
-
 class Application:
     def __init__(self, logger, yes):
         self.logger = logger
         self.yes = yes
 
-    def run(self, base_directory, target, append_files, remove_files, rev_from, rev_to):
-        # Read definition configuration from JSON or file
-        (def_config, def_path, def_ignore) = _read_json(base_directory, target.definition, '.creep.def', {})
-
-        definition = load_definition(self.logger, def_config)
-
-        if definition is None:
-            return False
-
-        if def_ignore:
-            definition.ignore(os.path.basename(def_path))
-
-        def_directory = os.path.dirname(def_path)
-
-        # Load environment configuration from JSON or file
-        (env_config, env_path, env_ignore) = _read_json(def_directory, definition.environment, '.creep.env', None)
-
-        if env_config is None:
-            self.logger.error('Environment file "{0}" not found.'.format(env_path))
-
-            return False
-
-        environment = load_environment(self.logger, env_config)
-
-        if environment is None:
-            return False
-
-        if env_ignore:
-            definition.ignore(os.path.basename(env_path))
+    def run(self, definition, location_names, append_files, remove_files, rev_from, rev_to):
+        success = True
 
         # Compute origin path relative to definition file
-        with Source(def_directory, definition.origin) as source_path:
-            # Ensure source directory is valid
+        with Source(self.logger, definition.origin) as source_path:
             if source_path is None:
-                self.logger.error('Origin path "{0}" doesn\'t exist.'.format(origin_path))
-
                 return False
 
             # Expand location names
-            if len(target.locations) < 1:
+            if len(location_names) < 1:
                 location_names = ['default']
-            elif len(target.locations) == 1 and target.locations[0] == '*':
-                location_names = environment.locations.keys()
-            else:
-                location_names = target.locations
+            elif len(location_names) == 1 and location_names[0] == '*':
+                location_names = definition.environment.locations.keys()
 
             # Deploy to selected locations
-            ok = True
-
             for location_name in location_names:
-                location = environment.get_location(location_name)
+                location = definition.environment.get_location(location_name)
 
                 if location is None:
-                    self.logger.warning('Environment file "{0}" has no location "{0}".'.format(env_path, location_name))
+                    self.logger.debug('Skip environment "{0}" from definition "{1}" with no location "{2}".'.format(
+                        definition.environment.where, definition.where, location_name))
 
                     continue
 
                 if location.connection is not None:
                     self.logger.info('Deploying to location "{0}"...'.format(location_name))
+
                     if not self.__sync(source_path, definition, location, location_name, append_files, remove_files,
                                        rev_from, rev_to):
-                        ok = False
+                        success = False
 
                         continue
 
-                for cascade in location.cascades:
-                    self.logger.info('Cascading to definition "{0}"...'.format(cascade.definition))
-                    self.logger.enter()
+            # Trigger cascaded definitions
+            for cascade in definition.cascades:
+                self.logger.info('Cascading to "{0}"...'.format(cascade.where))
+                self.logger.enter()
 
-                    ok = self.run(source_path, cascade, [], [], None, None) and ok
+                success = self.run(cascade, location_names, [], [], None, None) and success
 
-                    self.logger.leave()
+                self.logger.leave()
 
-            return ok
+        # Return combined success status
+        return success
 
     def __prompt(self, question):
         if self.yes:
@@ -146,10 +90,12 @@ class Application:
             return False
 
         # Read revision file
+        location_state_path = os.path.join(source, location.state)
+
         if not location.local:
             data = deployer.read(self.logger, location.state)
-        elif os.path.exists(_join_path(source, location.state)):
-            data = open(_join_path(source, location.state), 'rb').read()
+        elif os.path.exists(location_state_path):
+            data = open(location_state_path, 'rb').read()
         else:
             data = ''
 
