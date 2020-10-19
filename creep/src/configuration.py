@@ -62,15 +62,17 @@ class Definition:
                 if type == Action.ADD:
                     os.rename(_join_path(base_directory, previous_path), _join_path(base_directory, path))
 
-                self.logger.debug('File \'{0}\' renamed to \'{1}\'.'.format(previous_path, path))
+                self.logger.debug('File \'{0}\' was renamed to \'{1}\'.'.format(previous_path, path))
 
             # Apply link command if any
             if modifier.link is not None and type == Action.ADD:
+                self.logger.debug('Applying \'link\' command \'{1}\' on file \'{0}\'.'.format(path, modifier.modify))
+
                 out = self.run(base_directory, path, modifier.link)
 
                 if out is not None:
                     for link in out.decode('utf-8').splitlines():
-                        self.logger.debug('File \'{0}\' is linked to file \'{1}\'.'.format(path, link))
+                        self.logger.debug('File \'{0}\' was linked to file \'{1}\'.'.format(path, link))
 
                         actions.extend(self.apply(base_directory, link, type, used))
                 else:
@@ -80,6 +82,8 @@ class Definition:
 
             # Build output file using processing command if any
             if modifier.modify is not None and type == Action.ADD:
+                self.logger.debug('Applying \'modify\' command \'{1}\' on file \'{0}\'.'.format(path, modifier.modify))
+
                 out = self.run(base_directory, path, modifier.modify)
 
                 if out is not None:
@@ -94,11 +98,13 @@ class Definition:
             os.chmod(_join_path(base_directory, path), modifier.chmod)
 
             # Apply filtering command if any
-            if modifier.filter is not None and (modifier.filter == ''
-                                                or self.run(base_directory, path, modifier.filter) is None):
-                self.logger.debug('File \'{0}\' filtered out.'.format(path))
+            if modifier.filter is not None:
+                self.logger.debug('Applying \'filter\' command \'{1}\' on file \'{0}\'.'.format(path, modifier.filter))
 
-                type = Action.NOP
+                if modifier.filter == '' or self.run(base_directory, path, modifier.filter) is None:
+                    self.logger.debug('File \'{0}\' was filtered out.'.format(path))
+
+                    type = Action.NOP
 
             # Append action to list and return
             actions.append(Action(path, type))
@@ -117,6 +123,8 @@ class Definition:
         result = Process(command.replace('{}', path)).set_directory(base_directory).set_shell(True).execute()
 
         if not result:
+            self.logger.debug(result.err.decode('utf-8'))
+
             return None
 
         return result.out
