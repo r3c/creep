@@ -73,6 +73,7 @@ def main():
     parser.add_argument('-y',
                         '--yes',
                         action='store_true',
+                        default=not sys.stdout.isatty(),
                         help='Skip every prompt and always assume "yes" answer instead')
 
     parser.add_argument('--extra-append', action='append', default=[], help=argparse.SUPPRESS)
