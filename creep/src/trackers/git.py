@@ -17,17 +17,21 @@ class GitTracker:
 
     def diff(self, logger, base_path, work_path, rev_from, rev_to):
         # Parse and validate source and target revisions
-        if rev_from is not None and rev_from != '':
+        if rev_from is None or rev_from == '':
+            process = Process(['git', 'hash-object', '-t', 'tree', '/dev/null'])
+        elif isinstance(rev_from, str):
             process = Process(['git', 'rev-parse', '--quiet', '--verify', rev_from])
         else:
-            process = Process(['git', 'hash-object', '-t', 'tree', '/dev/null'])
+            logger.error('Corrupted source revision "{0}" (must be a valid Git hash).'.format(rev_from))
+
+            return None
 
         res_from = process \
          .set_directory (base_path) \
          .execute ()
 
         if not res_from:
-            logger.warning('Invalid source revision "{0}".'.format(rev_from))
+            logger.error('Unknown source revision "{0}" (must be a valid Git tree-ish).'.format(rev_from))
             logger.debug(res_from.err.decode('utf-8'))
 
             return None
@@ -37,7 +41,7 @@ class GitTracker:
          .execute ()
 
         if not res_to:
-            logger.warning('Invalid target revision "{0}".'.format(rev_to))
+            logger.error('Unknown target revision "{0}" (must be a valid Git tree-ish).'.format(rev_to))
             logger.debug(res_to.err.decode('utf-8'))
 
             return None
@@ -61,7 +65,7 @@ class GitTracker:
          .execute ()
 
         if not archive:
-            logger.warning('Couldn\'t export archive from Git.')
+            logger.error('Couldn\'t export archive from Git.')
             logger.debug(archive.err.decode('utf-8'))
 
             return None
@@ -72,7 +76,7 @@ class GitTracker:
          .execute ()
 
         if not diff:
-            logger.warning('Couldn\'t get diff from Git.')
+            logger.error('Couldn\'t get diff from Git.')
             logger.debug(diff.err.decode('utf-8'))
 
             return None

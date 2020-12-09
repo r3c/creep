@@ -32,7 +32,15 @@ class HashTracker:
         return entries
 
     def diff(self, logger, base_path, work_path, rev_from, rev_to):
-        return self.recurse(base_path, work_path, '.', rev_from or {}, rev_to or {})
+        rev_from_or_empty = rev_from or {}
+        rev_to_or_empty = rev_to or {}
+
+        if not isinstance(rev_from_or_empty, dict):
+            logger.error('Corrupted source revision "{0}".'.format(rev_from))
+
+            return None
+
+        return self.recurse(base_path, work_path, '.', rev_from_or_empty, rev_to_or_empty)
 
     def digest(self, path):
         hash = hashlib.new(self.algorithm)
