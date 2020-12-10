@@ -298,8 +298,8 @@ class ApplicationTester(unittest.TestCase):
 
     def test_deploy_using_definition_path_with_cascade_tree(self):
         self.create_directory('target')
-        self.create_file('source/.creep.def', _get_json({"cascades": ["a"]}))
-        self.create_file('source/a/.creep.def', _get_json({"cascades": ["b"]}))
+        self.create_file('source/.creep.def', _get_json({"cascades": ["a"], "environment": {"default": {}}}))
+        self.create_file('source/a/.creep.def', _get_json({"cascades": ["b"], "environment": {"default": {}}}))
         self.create_file('source/a/b/.creep.env', _get_json({"default": {"connection": "file:///../../../target"}}))
         self.create_file('source/a/b/c', b'c')
 

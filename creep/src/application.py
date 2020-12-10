@@ -39,19 +39,20 @@ class Application:
                 location = definition.environment.get_location(location_name)
 
                 if location is None:
-                    self.logger.debug('Skip environment "{0}" from definition "{1}" with no location "{2}".'.format(
-                        definition.environment.where, definition.where, location_name))
+                    self.logger.error('No location "{location}" found in "{environment}" from "{definition}".'.format(
+                        definition=definition.where, environment=definition.environment.where, location=location_name))
+
+                    success = False
 
                     continue
 
-                if location.connection is not None:
-                    self.logger.info('Deploying to location "{0}"...'.format(location_name))
+                if location.connection is None:
+                    continue
 
-                    if not self.__sync(source_path, definition, location, location_name, append_files, remove_files,
-                                       rev_from, rev_to):
-                        success = False
+                self.logger.info('Deploying to location "{0}"...'.format(location_name))
 
-                        continue
+                success = self.__sync(source_path, definition, location, location_name, append_files, remove_files,
+                                      rev_from, rev_to) and success
 
             # Trigger cascaded definitions
             for cascade in definition.cascades:
