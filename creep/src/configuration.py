@@ -95,7 +95,8 @@ class Definition:
                     type = Action.ERR
 
             # Set file mode
-            os.chmod(_join_path(base_directory, path), modifier.chmod)
+            if modifier.chmod is not None and type == Action.ADD:
+                os.chmod(_join_path(base_directory, path), modifier.chmod)
 
             # Apply filtering command if any
             if modifier.filter is not None:
@@ -295,7 +296,8 @@ def __load_modifier(logger, base_where, config):
 
         return None
 
-    chmod = int(config.get('chmod', '644'), 8)
+    chmod_string = config.get('chmod', None)
+    chmod = chmod_string is not None and int(chmod_string, 8) or None
     filter = config.get('filter', None)
     link = config.get('link', None)
     modify = __get_or_fallback(logger, base_where, config, 'modify', 'adapt', None)

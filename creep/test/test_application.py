@@ -25,16 +25,21 @@ class ApplicationTester(unittest.TestCase):
     def tearDown(self):
         self.directory.cleanup()
 
-    def assert_file(self, name, expected=None):
+    def assert_file(self, name, expect_exists=None, expect_chmod=None):
         path = os.path.join(self.directory.name, name)
 
-        if expected is not None:
+        if expect_exists is not None:
             self.assertTrue(os.path.exists(path))
 
             with open(path, 'rb') as file:
                 data = file.read()
 
-            self.assertEqual(data, expected)
+            self.assertEqual(data, expect_exists)
+
+            if expect_chmod is not None:
+                stat = os.stat(path)
+
+                self.assertEqual(stat.st_mode & 0o777, expect_chmod)
         else:
             self.assertFalse(os.path.exists(path))
 
@@ -304,6 +309,31 @@ class ApplicationTester(unittest.TestCase):
         self.assert_file('target/a/.creep.def', None)
         self.assert_file('target/a/b/.creep.env', None)
         self.assert_file('target/c', b'c')
+
+    def test_deploy_using_definition_path_with_modifier_chmod(self):
+        self.create_directory('target')
+        self.create_file(
+            'source/.creep.def',
+            _get_json({
+                "environment": {
+                    "default": {
+                        "connection": "file:///../target"
+                    }
+                },
+                "modifiers": [{
+                    "pattern": "^.$",
+                    "chmod": "751"
+                }]
+            }))
+        self.create_file('target/.creep.rev', _get_json({"default": {"a": "dummy", "b": "dummy"}}))
+        self.create_file('source/a', b'a')
+        self.create_file('target/b', b'b')
+
+        self.deploy('source', ['default'])
+
+        self.assert_file('target/.creep.def', None)
+        self.assert_file('target/a', b'a', 0o751)
+        self.assert_file('target/b')
 
     def test_deploy_using_definition_path_with_modifier_filter_false(self):
         self.create_directory('target')
