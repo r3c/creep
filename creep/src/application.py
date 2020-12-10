@@ -89,6 +89,9 @@ class Application:
         if deployer is None or tracker is None:
             return False
 
+        self.logger.debug('Compare changes with "{tracker}" and deploy with "{deployer}"'.format(
+            deployer=type(deployer).__name__, tracker=type(tracker).__name__))
+
         # Read revision file
         location_state_path = os.path.join(source, location.state)
 

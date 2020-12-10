@@ -6,7 +6,9 @@ import re
 
 class ColorStreamHandler(logging.StreamHandler):
     COLOR_BEGIN = '(('
+    COLOR_BEGIN_RE = re.escape(COLOR_BEGIN)
     COLOR_END = '))'
+    COLOR_END_RE = re.escape(COLOR_END)
     RESET = '\033[0m'
 
     def __init__(self, *args, **kwargs):
@@ -32,6 +34,8 @@ class ColorStreamHandler(logging.StreamHandler):
             'reset': self.RESET
         }
 
+        color_names = ['default'] + list(self.colors.keys())
+
         self.end = getattr(self, 'terminator', '\n')
         self.levels = {
             logging.CRITICAL: 'red',
@@ -40,8 +44,7 @@ class ColorStreamHandler(logging.StreamHandler):
             logging.INFO: 'white',
             logging.WARNING: 'yellow'
         }
-        self.tags = re.compile(
-            re.escape(self.COLOR_BEGIN) + '(' + '|'.join(self.colors.keys()) + ')' + re.escape(self.COLOR_END))
+        self.tags = re.compile(self.COLOR_BEGIN_RE + '(' + '|'.join(color_names) + ')' + self.COLOR_END_RE)
 
     def is_tty(self):
         isatty = getattr(self.stream, 'isatty', None)
@@ -50,19 +53,19 @@ class ColorStreamHandler(logging.StreamHandler):
 
     def emit(self, record):
         try:
-            message = self.format(record)
-            stream = self.stream
+            template = self.format(record)
 
             if self.is_tty():
-                message = self.COLOR_BEGIN + self.levels.get(record.levelno,
-                                                             'reset') + self.COLOR_END + message + self.RESET
-                message = self.tags.sub(lambda m: self.colors.get(m.group(1), self.RESET), message)
+                prefix_name = self.levels.get(record.levelno, 'reset')
+                prefix = self.COLOR_BEGIN + prefix_name + self.COLOR_END
+                default = self.colors.get(prefix_name, self.RESET)
+
+                message = self.tags.sub(lambda m: self.colors.get(m.group(1), default), prefix + template + self.RESET)
             else:
-                message = self.tags.sub('', message)
+                message = self.tags.sub('', template)
 
-            stream.write(message)
-            stream.write(self.end)
-
+            self.stream.write(message)
+            self.stream.write(self.end)
             self.flush()
 
         except (KeyboardInterrupt, SystemExit):
@@ -78,13 +81,13 @@ class IndentLoggerAdapter(logging.LoggerAdapter):
         self.indent = 0
 
     def enter(self):
-        self.indent = min(self.indent + 1, 8)
+        self.indent += 1
 
     def leave(self):
-        self.indent = max(self.indent - 1, 0)
+        self.indent -= 1
 
     def process(self, msg, kwargs):
-        return '| ' * self.indent + msg, kwargs
+        return '| ' * max(min(self.indent, 8), 0) + msg, kwargs
 
 
 class Logger:

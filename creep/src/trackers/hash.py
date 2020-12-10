@@ -40,7 +40,11 @@ class HashTracker:
 
             return None
 
-        return self.recurse(base_path, work_path, '.', rev_from_or_empty, rev_to_or_empty)
+        actions = self.recurse(base_path, work_path, '.', rev_from_or_empty, rev_to_or_empty)
+
+        logger.info('((fuchsia)){0}((default)) file(s) changed.'.format(len(actions)))
+
+        return actions
 
     def digest(self, path):
         hash = hashlib.new(self.algorithm)

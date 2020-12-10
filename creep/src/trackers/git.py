@@ -51,10 +51,12 @@ class GitTracker:
 
         # Display update information
         if hash_from != hash_to:
-            logger.info('Update from revision ((fuchsia)){0}((reset)) to ((fuchsia)){1}((reset))...'.format(
-                hash_from[0:8], hash_to[0:8]))
+            f = hash_from[0:8]
+            t = hash_to[0:8]
+
+            logger.info('Update from revision ((fuchsia)){0}((default)) to ((fuchsia)){1}((default)).'.format(f, t))
         else:
-            logger.info('Already at revision ((fuchsia)){0}((reset)).'.format(hash_from[0:8]))
+            logger.info('Already at revision ((fuchsia)){0}((default)).'.format(hash_from[0:8]))
 
             return []
 
