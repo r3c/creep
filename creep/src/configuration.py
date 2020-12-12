@@ -152,41 +152,6 @@ class Environment:
         return self.locations.get(name, None)
 
 
-def __get_config(logger, base_where, base_directory, object_or_path, ignores, default_filename):
-    if isinstance(object_or_path, dict):
-        directory = base_directory
-        root = object_or_path
-        where = base_where
-
-    elif isinstance(object_or_path, str):
-        config_path = _join_path(base_directory, object_or_path)
-
-        if os.path.isdir(config_path):
-            config_path = _join_path(config_path, default_filename)
-
-        directory = os.path.dirname(config_path)
-        where = config_path
-
-        if os.path.isfile(config_path):
-            ignores.append(config_path)
-
-            with open(config_path, 'rb') as file:
-                contents = file.read().decode('utf-8')
-
-            root = json.loads(contents)
-        else:
-            root = {}
-
-    else:
-        logger.error('Value must be an object or string in {0}'.format(base_where))
-
-        directory = None
-        root = None
-        where = None
-
-    return (directory, where, root)
-
-
 def __get_or_fallback(logger, base_where, config, key, obsolete, default_value):
     if obsolete in config:
         logger.warning('Deprecated property "{0}" should be replaced by "{1}" in {2}'.format(obsolete, key, base_where))
@@ -202,10 +167,12 @@ def _join_path(a, b):
 
 def __load_definition(logger, base_where, base_directory, object_or_path):
     ignores = []
-    directory, where, config = __get_config(logger, base_where, base_directory, object_or_path, ignores, '.creep.def')
+    result = __read_object_or_path(logger, base_where, base_directory, object_or_path, '.creep.def', ignores)
 
-    if config is None:
+    if result is None:
         return None
+
+    directory, where, config = result
 
     # Read cascades from JSON configuration
     cascades_config = config.get('cascades', [])
@@ -258,10 +225,12 @@ def __load_definition(logger, base_where, base_directory, object_or_path):
 
 
 def __load_environment(logger, base_where, base_directory, object_or_path, ignores):
-    _, where, config = __get_config(logger, base_where, base_directory, object_or_path, ignores, '.creep.env')
+    result = __read_object_or_path(logger, base_where, base_directory, object_or_path, '.creep.env', ignores)
 
-    if config is None:
+    if result is None:
         return None
+
+    _, where, config = result
 
     locations = {
         name: __load_location(logger, where + '.' + name, location_config)
@@ -274,9 +243,9 @@ def __load_environment(logger, base_where, base_directory, object_or_path, ignor
     return Environment(locations, where)
 
 
-def __load_location(logger, base_where, config):
+def __load_location(logger, where, config):
     if not isinstance(config, dict):
-        logger.error('Value must be an object in {0}'.format(base_where))
+        logger.error('Value must be an object in {0}'.format(where))
 
         return None
 
@@ -290,11 +259,11 @@ def __load_location(logger, base_where, config):
     return EnvironmentLocation(append_files, connection, local, options, remove_files, state)
 
 
-def __load_modifier(logger, base_where, config):
+def __load_modifier(logger, where, config):
     pattern = config.get('pattern', None)
 
     if pattern is None:
-        logger.error('Property "pattern" must be a string in {0}'.format(base_where))
+        logger.error('Property "pattern" must be a string in {0}'.format(where))
 
         return None
 
@@ -302,8 +271,8 @@ def __load_modifier(logger, base_where, config):
     chmod = chmod_string is not None and int(chmod_string, 8) or None
     filter = config.get('filter', None)
     link = config.get('link', None)
-    modify = __get_or_fallback(logger, base_where, config, 'modify', 'adapt', None)
-    rename = __get_or_fallback(logger, base_where, config, 'rename', 'name', None)
+    modify = __get_or_fallback(logger, where, config, 'modify', 'adapt', None)
+    rename = __get_or_fallback(logger, where, config, 'rename', 'name', None)
 
     return DefinitionModifier(re.compile(pattern), rename, link, modify, chmod, filter)
 
@@ -318,6 +287,34 @@ def __load_origin(logger, base_directory, config):
         return url._replace(scheme='file', path='///' + _join_path(base_directory, url.path)).geturl()
 
     return config
+
+
+def __read_object_or_path(logger, where, base_directory, object_or_path, default_filename, ignores):
+    if isinstance(object_or_path, dict):
+        return (base_directory, where, object_or_path)
+
+    elif isinstance(object_or_path, str):
+        config_path = _join_path(base_directory, object_or_path)
+
+        if os.path.isdir(config_path):
+            config_path = _join_path(config_path, default_filename)
+
+        if os.path.isfile(config_path):
+            ignores.append(config_path)
+
+            with open(config_path, 'rb') as file:
+                contents = file.read().decode('utf-8')
+
+            root = json.loads(contents)
+        else:
+            root = {}
+
+        return (os.path.dirname(config_path), config_path, root)
+
+    else:
+        logger.error('Value must be an object or string in {0}'.format(where))
+
+        return None
 
 
 def load(logger, base_directory, object_or_path):
