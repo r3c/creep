@@ -21,11 +21,9 @@ class Application:
         self.yes = yes
 
     def run(self, definition, location_names, append_files, remove_files, rev_from, rev_to):
-        success = True
-
         # Compute origin path relative to definition file
-        with Source(self.logger, definition.origin) as source_path:
-            if source_path is None:
+        with Source(self.logger, definition.origin) as path:
+            if path is None:
                 return False
 
             # Expand location names
@@ -34,37 +32,41 @@ class Application:
             elif len(location_names) == 1 and location_names[0] == '*':
                 location_names = definition.environment.locations.keys()
 
+            # Search for undefined locations
+            locations = [(name, definition.environment.get_location(name)) for name in location_names]
+            names = list(map(lambda i: i[0], filter(lambda item: item[1] is None, locations)))
+
+            if len(names) > 0:
+                self.logger.error('Location(s) missing from {environment}: {names}.'.format(
+                    environment=definition.environment.where, names=', '.join(names)))
+
+                return False
+
             # Deploy to selected locations
-            for location_name in location_names:
-                location = definition.environment.get_location(location_name)
-
-                if location is None:
-                    self.logger.error('No location "{location}" found in "{environment}" from "{definition}".'.format(
-                        definition=definition.where, environment=definition.environment.where, location=location_name))
-
-                    success = False
-
-                    continue
-
+            for name, location in locations:
                 if location.connection is None:
                     continue
 
-                self.logger.info('Deploying to location "{0}"...'.format(location_name))
+                self.logger.info('Deploying to location "{0}"...'.format(name))
 
-                success = self.__sync(source_path, definition, location, location_name, append_files, remove_files,
-                                      rev_from, rev_to) and success
+                success = self.__sync(path, definition, location, name, append_files, remove_files, rev_from, rev_to)
+
+                if not success:
+                    return False
 
             # Trigger cascaded definitions
             for cascade in definition.cascades:
                 self.logger.info('Cascading to "{0}"...'.format(cascade.where))
                 self.logger.enter()
 
-                success = self.run(cascade, location_names, [], [], None, None) and success
+                success = self.run(cascade, location_names, [], [], None, None)
 
                 self.logger.leave()
 
-        # Return combined success status
-        return success
+                if not success:
+                    return False
+
+        return True
 
     def __prompt(self, question):
         if self.yes:
