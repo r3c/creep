@@ -91,14 +91,14 @@ class Configuration:
 
     def get_value(self, type, default):
         if self.undefined:
-            return default
+            return (default, True)
 
         elif isinstance(self.value, type):
-            return self.value
+            return (self.value, True)
 
-        self.log_warning('Ignored property with type != "{type}"', type=type)
+        self.log_warning('Property must have type "{type}"', type=type)
 
-        return default
+        return (None, False)
 
     def log_error(self, prefix, **kwargs):
         message = prefix + ' in {path}:{position}'
@@ -313,13 +313,15 @@ def __load_definition(logger, parent):
     origin = __load_origin(__extract_field(configuration, definition_object, 'origin'))
     tracker = __extract_field(configuration, definition_object, 'tracker', ['source']).get_value(str, None)
 
+    if environment is None or not options[1] or origin is None or not tracker[1]:
+        return None
+
     for key in definition_object.keys():
         configuration.log_warning('Ignored unknown property "{key}"', key=key)
 
-    if environment is None or origin is None:
-        return None
+    path = configuration.path
 
-    definition = Definition(logger, origin, environment, tracker, options, cascades, modifiers, configuration.path)
+    definition = Definition(logger, origin, environment, tracker[0], options[0], cascades, modifiers, path)
 
     for ignore in set((os.path.basename(ignore) for ignore in ignores)):
         definition.ignore(ignore)
@@ -359,10 +361,13 @@ def __load_location(configuration):
     remove_files = __extract_field(configuration, location_object, 'remove_files').get_value(list, [])
     state = __extract_field(configuration, location_object, 'state').get_value(str, '.creep.rev')
 
+    if not append_files[1] or not connection[1] or not local[1] or not options[1] or not remove_files[1] or not state[1]:
+        return None
+
     for key in location_object.keys():
         configuration.log_warning('Ignored unknown property "{key}"', key=key)
 
-    return EnvironmentLocation(append_files, connection, local, options, remove_files, state)
+    return EnvironmentLocation(append_files[0], connection[0], local[0], options[0], remove_files[0], state[0])
 
 
 def __load_modifier(configuration):
@@ -378,22 +383,30 @@ def __load_modifier(configuration):
     pattern = __extract_field(configuration, modifier_object, 'pattern').get_value(str, None)
     rename = __extract_field(configuration, modifier_object, 'rename', 'name').get_value(str, None)
 
-    if pattern is None:
+    if not chmod[1] or not filter[1] or not link[1] or not modify[1] or not pattern[1] or not rename[1]:
+        return None
+
+    if pattern[0] is None:
         configuration.log_error('Undefined modifier pattern')
 
         return None
 
-    chmod_integer = chmod is not None and int(chmod, 8) or None
-    pattern_regex = re.compile(pattern)
+    chmod_integer = chmod[0] is not None and int(chmod[0], 8) or None
+    pattern_regex = re.compile(pattern[0])
 
     for key in modifier_object.keys():
         configuration.log_warning('Ignored unknown property "{key}"', key=key)
 
-    return DefinitionModifier(pattern_regex, rename, link, modify, chmod_integer, filter)
+    return DefinitionModifier(pattern_regex, rename[0], link[0], modify[0], chmod_integer, filter[0])
 
 
 def __load_origin(configuration):
-    origin_value = configuration.get_value(str, '.')
+    origin = configuration.get_value(str, '.')
+
+    if not origin[1]:
+        return None
+
+    origin_value = origin[0]
     origin_url = urllib.parse.urlparse(origin_value)
 
     if origin_url.scheme == '' or origin_url.scheme == 'file':
