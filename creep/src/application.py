@@ -38,7 +38,7 @@ class Application:
 
             if len(names) > 0:
                 self.logger.error('Location(s) missing from {environment}: {names}.'.format(
-                    environment=definition.environment.where, names=', '.join(names)))
+                    environment=definition.environment.path, names=', '.join(names)))
 
                 return False
 
@@ -56,7 +56,7 @@ class Application:
 
             # Trigger cascaded definitions
             for cascade in definition.cascades:
-                self.logger.info('Cascading to "{0}"...'.format(cascade.where))
+                self.logger.info('Cascading to "{0}"...'.format(cascade.path))
                 self.logger.enter()
 
                 success = self.run(cascade, location_names, [], [], None, None)

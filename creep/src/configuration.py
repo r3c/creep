@@ -10,6 +10,107 @@ from .action import Action
 from .process import Process
 
 
+def _join_path(a, b):
+    return os.path.normpath(os.path.join(a, b))
+
+
+class Configuration:
+    def __init__(self, logger, path, position, value, undefined):
+        self.logger = logger
+        self.path = path
+        self.position = position
+        self.undefined = undefined
+        self.value = value
+
+    def __repr__(self):
+        return str(self.value)
+
+    def get_array(self):
+        if self.undefined:
+            return []
+
+        elif isinstance(self.value, list):
+            position = lambda index: '{parent}[{index}]'.format(index=index, parent=self.position)
+
+            return [
+                Configuration(self.logger, self.path, position(index), value, False)
+                for index, value in enumerate(self.value)
+            ]
+
+        self.log_error('Property must be an array of elements')
+
+        return None
+
+    def get_include(self, default_filename, ignores):
+        include = self.undefined and '.' or self.value
+
+        if isinstance(include, dict):
+            return Configuration(self.logger, self.path, self.position, include, False)
+
+        elif isinstance(include, str):
+            config_path = _join_path(os.path.dirname(self.path), include)
+
+            if os.path.isdir(config_path):
+                config_path = _join_path(config_path, default_filename)
+
+            if os.path.isfile(config_path):
+                ignores.append(config_path)
+
+                with open(config_path, 'rb') as file:
+                    contents = file.read().decode('utf-8')
+
+                root = json.loads(contents)
+            else:
+                root = {}
+
+            return Configuration(self.logger, config_path, '', root, False)
+
+        else:
+            self.log_error('Property must be an object or string')
+
+            return None
+
+    def get_object(self):
+        if self.undefined:
+            return {}
+
+        elif isinstance(self.value, dict):
+            position = lambda key: '{parent}.{key}'.format(key=key, parent=self.position)
+
+            return {
+                key: Configuration(self.logger, self.path, position(key), value, False)
+                for key, value in self.value.items()
+            }
+
+        self.log_error('Property must be an object with keys and values')
+
+        return None
+
+    def get_undefined(self):
+        return Configuration(self.logger, self.path, self.position, None, True)
+
+    def get_value(self, type, default):
+        if self.undefined:
+            return default
+
+        elif isinstance(self.value, type):
+            return self.value
+
+        self.log_warning('Ignored property with type != "{type}"', type=type)
+
+        return default
+
+    def log_error(self, prefix, **kwargs):
+        message = prefix + ' in {path}:{position}'
+
+        self.logger.error(message.format(message=message, path=self.path, position=self.position, **kwargs))
+
+    def log_warning(self, prefix, **kwargs):
+        message = prefix + ' in {path}:{position}'
+
+        self.logger.warning(message.format(message=message, path=self.path, position=self.position, **kwargs))
+
+
 class DefinitionModifier:
     def __init__(self, regex, rename, link, modify, chmod, filter):
         self.chmod = chmod
@@ -21,15 +122,15 @@ class DefinitionModifier:
 
 
 class Definition:
-    def __init__(self, logger, origin, environment, tracker, options, cascades, modifiers, where):
+    def __init__(self, logger, origin, environment, tracker, options, cascades, modifiers, path):
         self.cascades = cascades
         self.environment = environment
         self.logger = logger
         self.modifiers = modifiers
         self.options = options
         self.origin = origin
+        self.path = path
         self.tracker = tracker
-        self.where = where
 
     def apply(self, base_directory, path, type, used):
         # Ensure we don't process a file already scanned
@@ -78,7 +179,7 @@ class Definition:
 
                         actions.extend(self.apply(base_directory, link, type, used))
                 else:
-                    self.logger.warning('Command \'link\' on file \'{0}\' returned non-zero code.'.format(path))
+                    self.logger.warning('Command \'link\' on file \'{path}\' returned non-zero code.'.format(path=path))
 
                     type = Action.ERR
 
@@ -92,7 +193,8 @@ class Definition:
                     with open(_join_path(base_directory, path), 'wb') as file:
                         file.write(out)
                 else:
-                    self.logger.warning('Command \'modify\' on file \'{0}\' returned non-zero code.'.format(path))
+                    self.logger.warning(
+                        'Command \'modify\' on file \'{path}\' returned non-zero code.'.format(path=path))
 
                     type = Action.ERR
 
@@ -144,79 +246,80 @@ class EnvironmentLocation:
 
 
 class Environment:
-    def __init__(self, locations, where):
+    def __init__(self, locations, path):
         self.locations = locations
-        self.where = where
+        self.path = path
 
     def get_location(self, name):
         return self.locations.get(name, None)
 
 
-def __get_or_fallback(logger, base_where, config, key, obsolete, default_value):
-    if obsolete in config:
-        logger.warning('Deprecated property "{0}" should be replaced by "{1}" in {2}'.format(obsolete, key, base_where))
+def __extract_field(parent, source, key, alternatives=[]):
+    value = source.pop(key, None)
 
-        return config[obsolete]
+    if value is not None:
+        return value
 
-    return config.get(key, default_value)
+    for alternative in alternatives:
+        value = source.pop(alternative, None)
+
+        if value is not None:
+            value.log_error('Deprecated property "{alternative}" should be replaced by "{key}"',
+                            alternative=alternative,
+                            key=key)
+
+            return value
+
+    return parent.get_undefined()
 
 
-def _join_path(a, b):
-    return os.path.normpath(os.path.join(a, b))
-
-
-def __load_definition(logger, base_where, base_directory, object_or_path):
+def __load_definition(logger, parent):
     ignores = []
-    result = __read_object_or_path(logger, base_where, base_directory, object_or_path, '.creep.def', ignores)
+    configuration = parent.get_include('.creep.def', ignores)
 
-    if result is None:
+    if configuration is None:
         return None
-
-    directory, where, config = result
 
     # Read cascades from JSON configuration
-    cascades_config = config.get('cascades', [])
+    definition_object = configuration.get_object()
 
-    if not isinstance(cascades_config, list):
-        logger.error('Property "cascades" must be an array in {0}'.format(where))
-
+    if definition_object is None:
         return None
 
-    cascades = [
-        __load_definition(logger, where + '.cascades[' + str(index) + ']', directory, cascade_config)
-        for index, cascade_config in enumerate(cascades_config)
-    ]
+    cascades_array = __extract_field(configuration, definition_object, 'cascades').get_array()
+
+    if cascades_array is None:
+        return None
+
+    cascades = [__load_definition(logger, cascade) for cascade in cascades_array]
 
     if None in cascades:
         return None
 
     # Read modifiers from JSON configuration
-    modifiers_config = config.get('modifiers', [])
+    modifiers_array = __extract_field(configuration, definition_object, 'modifiers').get_array()
 
-    if not isinstance(modifiers_config, list):
-        logger.error('Property "modifiers" must be an array in {0}'.format(where))
-
+    if modifiers_array is None:
         return None
 
-    modifiers = [
-        __load_modifier(logger, where + '.modifier[' + str(index) + ']', modifier_config)
-        for index, modifier_config in enumerate(modifiers_config)
-    ]
+    modifiers = [__load_modifier(modifier) for modifier in modifiers_array]
 
     if None in modifiers:
         return None
 
     # Read scalar properties from JSON configuration
-    environment_config = config.get('environment', '.')
-    environment = __load_environment(logger, where + '.environment', directory, environment_config, ignores)
-    options = config.get('options', {})
-    origin = __load_origin(logger, directory, config.get('origin', '.'))
-    tracker = __get_or_fallback(logger, where, config, 'tracker', 'source', None)
+    environment = __load_environment(__extract_field(configuration, definition_object, 'environment'), ignores)
+    options = __extract_field(configuration, definition_object, 'options').get_value(dict, {})
+    origin = __load_origin(__extract_field(configuration, definition_object, 'origin'))
+    tracker = __extract_field(configuration, definition_object, 'tracker', ['source']).get_value(str, None)
 
-    if environment is None:
+    for key in definition_object.keys():
+        configuration.log_warning('Ignored unknown property "{key}"', key=key)
+
+    if environment is None or origin is None:
         return None
 
-    definition = Definition(logger, origin, environment, tracker, options, cascades, modifiers, where)
+    definition = Definition(logger, origin, environment, tracker, options, cascades, modifiers, configuration.path)
 
     for ignore in set((os.path.basename(ignore) for ignore in ignores)):
         definition.ignore(ignore)
@@ -224,98 +327,87 @@ def __load_definition(logger, base_where, base_directory, object_or_path):
     return definition
 
 
-def __load_environment(logger, base_where, base_directory, object_or_path, ignores):
-    result = __read_object_or_path(logger, base_where, base_directory, object_or_path, '.creep.env', ignores)
+def __load_environment(parent, ignores):
+    configuration = parent.get_include('.creep.env', ignores)
 
-    if result is None:
+    if configuration is None:
         return None
 
-    _, where, config = result
+    environment_object = configuration.get_object()
 
-    locations = {
-        name: __load_location(logger, where + '.' + name, location_config)
-        for name, location_config in config.items()
-    }
+    if environment_object is None:
+        return None
+
+    locations = {name: __load_location(location) for name, location in environment_object.items()}
 
     if None in locations.values():
         return None
 
-    return Environment(locations, where)
+    return Environment(locations, configuration.path)
 
 
-def __load_location(logger, where, config):
-    if not isinstance(config, dict):
-        logger.error('Value must be an object in {0}'.format(where))
+def __load_location(configuration):
+    location_object = configuration.get_object()
 
+    if location_object is None:
         return None
 
-    append_files = config.get('append_files', [])
-    connection = config.get('connection', None)
-    local = config.get('local', False)
-    options = config.get('options', {})
-    remove_files = config.get('remove_files', [])
-    state = config.get('state', '.creep.rev')
+    append_files = __extract_field(configuration, location_object, 'append_files').get_value(list, [])
+    connection = __extract_field(configuration, location_object, 'connection').get_value(str, None)
+    local = __extract_field(configuration, location_object, 'local').get_value(bool, False)
+    options = __extract_field(configuration, location_object, 'options').get_value(dict, {})
+    remove_files = __extract_field(configuration, location_object, 'remove_files').get_value(list, [])
+    state = __extract_field(configuration, location_object, 'state').get_value(str, '.creep.rev')
+
+    for key in location_object.keys():
+        configuration.log_warning('Ignored unknown property "{key}"', key=key)
 
     return EnvironmentLocation(append_files, connection, local, options, remove_files, state)
 
 
-def __load_modifier(logger, where, config):
-    pattern = config.get('pattern', None)
+def __load_modifier(configuration):
+    modifier_object = configuration.get_object()
+
+    if modifier_object is None:
+        return None
+
+    chmod = __extract_field(configuration, modifier_object, 'chmod').get_value(str, None)
+    filter = __extract_field(configuration, modifier_object, 'filter').get_value(str, None)
+    link = __extract_field(configuration, modifier_object, 'link').get_value(str, None)
+    modify = __extract_field(configuration, modifier_object, 'modify', 'adapt').get_value(str, None)
+    pattern = __extract_field(configuration, modifier_object, 'pattern').get_value(str, None)
+    rename = __extract_field(configuration, modifier_object, 'rename', 'name').get_value(str, None)
 
     if pattern is None:
-        logger.error('Property "pattern" must be a string in {0}'.format(where))
+        configuration.log_error('Undefined modifier pattern')
 
         return None
 
-    chmod_string = config.get('chmod', None)
-    chmod = chmod_string is not None and int(chmod_string, 8) or None
-    filter = config.get('filter', None)
-    link = config.get('link', None)
-    modify = __get_or_fallback(logger, where, config, 'modify', 'adapt', None)
-    rename = __get_or_fallback(logger, where, config, 'rename', 'name', None)
+    chmod_integer = chmod is not None and int(chmod, 8) or None
+    pattern_regex = re.compile(pattern)
 
-    return DefinitionModifier(re.compile(pattern), rename, link, modify, chmod, filter)
+    for key in modifier_object.keys():
+        configuration.log_warning('Ignored unknown property "{key}"', key=key)
+
+    return DefinitionModifier(pattern_regex, rename, link, modify, chmod_integer, filter)
 
 
-def __load_origin(logger, base_directory, config):
-    url = urllib.parse.urlparse(config)
+def __load_origin(configuration):
+    origin_value = configuration.get_value(str, '.')
+    origin_url = urllib.parse.urlparse(origin_value)
 
-    if url.scheme == '' or url.scheme == 'file':
+    if origin_url.scheme == '' or origin_url.scheme == 'file':
         # Hack: force triple slash before path so urllib preserves them. This will produce a URL with pattern
         # "file:///something" where "something" can be an absolute (starting with /) or relative path. After parsing
         # the URL, removing leading slash from path will give us back the original value of "something".
-        return url._replace(scheme='file', path='///' + _join_path(base_directory, url.path)).geturl()
+        original = _join_path(os.path.dirname(configuration.path), origin_url.path)
 
-    return config
+        return origin_url._replace(scheme='file', path='///' + original).geturl()
 
-
-def __read_object_or_path(logger, where, base_directory, object_or_path, default_filename, ignores):
-    if isinstance(object_or_path, dict):
-        return (base_directory, where, object_or_path)
-
-    elif isinstance(object_or_path, str):
-        config_path = _join_path(base_directory, object_or_path)
-
-        if os.path.isdir(config_path):
-            config_path = _join_path(config_path, default_filename)
-
-        if os.path.isfile(config_path):
-            ignores.append(config_path)
-
-            with open(config_path, 'rb') as file:
-                contents = file.read().decode('utf-8')
-
-            root = json.loads(contents)
-        else:
-            root = {}
-
-        return (os.path.dirname(config_path), config_path, root)
-
-    else:
-        logger.error('Value must be an object or string in {0}'.format(where))
-
-        return None
+    return origin_value
 
 
 def load(logger, base_directory, object_or_path):
-    return __load_definition(logger, 'definition', base_directory, object_or_path)
+    configuration = Configuration(logger, os.path.join(base_directory, '.'), '', object_or_path, False)
+
+    return __load_definition(logger, configuration)
