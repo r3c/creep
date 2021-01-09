@@ -1,8 +1,9 @@
-#!/usr/bin/python3
+#!/usr/bin/env python3
 
 import json
 import os
 import re
+import shutil
 import urllib.parse
 
 from .action import Action
@@ -60,7 +61,8 @@ class Definition:
                 path = _join_path(os.path.dirname(path), name)
 
                 if type == Action.ADD:
-                    os.rename(_join_path(base_directory, previous_path), _join_path(base_directory, path))
+                    # FIXME: must duplicate instead of rename so that references (e.g. links) won't break ; should be renamed at upload only instead
+                    shutil.copyfile(_join_path(base_directory, previous_path), _join_path(base_directory, path))
 
                 self.logger.debug('File \'{0}\' was renamed to \'{1}\'.'.format(previous_path, path))
 
