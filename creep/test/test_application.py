@@ -67,7 +67,7 @@ class ApplicationTester(unittest.TestCase):
             os.remove(path)
 
     def deploy(self, config, location_names):
-        logger = Logger.build(logging.WARNING)
+        logger = Logger.build(logging.WARNING, False)
         application = Application(logger, True)
         definition = load(logger, self.directory.name, config)
 

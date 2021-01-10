@@ -42,6 +42,11 @@ def main():
                         help='Use given initial version instead of reading it from revision file',
                         metavar='REV')
 
+    parser.add_argument('--no-color',
+                        action='store_true',
+                        default=False,
+                        help='Disable ANSI color codes in output logs')
+
     parser.add_argument('-q',
                         '--quiet',
                         dest='level',
@@ -80,7 +85,7 @@ def main():
     parser.add_argument('--extra-remove', action='append', default=[], help=argparse.SUPPRESS)
 
     args = parser.parse_args()
-    logger = Logger.build(args.level)
+    logger = Logger.build(args.level, args.no_color)
 
     application = Application(logger, args.yes)
 

@@ -11,7 +11,7 @@ class ColorStreamHandler(logging.StreamHandler):
     COLOR_END_RE = re.escape(COLOR_END)
     RESET = '\033[0m'
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, no_color, *args, **kwargs):
         super(ColorStreamHandler, self).__init__(*args, **kwargs)
 
         self.colors = {
@@ -44,6 +44,7 @@ class ColorStreamHandler(logging.StreamHandler):
             logging.INFO: 'white',
             logging.WARNING: 'yellow'
         }
+        self.no_color = no_color
         self.tags = re.compile(self.COLOR_BEGIN_RE + '(' + '|'.join(color_names) + ')' + self.COLOR_END_RE)
 
     def is_tty(self):
@@ -55,7 +56,7 @@ class ColorStreamHandler(logging.StreamHandler):
         try:
             template = self.format(record)
 
-            if self.is_tty():
+            if not self.no_color and self.is_tty():
                 prefix_name = self.levels.get(record.levelno, 'reset')
                 prefix = self.COLOR_BEGIN + prefix_name + self.COLOR_END
                 default = self.colors.get(prefix_name, self.RESET)
@@ -92,10 +93,10 @@ class IndentLoggerAdapter(logging.LoggerAdapter):
 
 class Logger:
     @staticmethod
-    def build(level):
+    def build(level, no_color):
         formatter = logging.Formatter('%(levelname)s: %(message)s')
 
-        console = ColorStreamHandler()
+        console = ColorStreamHandler(no_color)
         console.setFormatter(formatter)
 
         logger = logging.getLogger()
