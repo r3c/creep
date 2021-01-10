@@ -8,6 +8,9 @@ import tempfile
 
 
 class GitTracker:
+    def __init__(self, logger):
+        self.logger = logger
+
     def current(self, base_path):
         revision = Process (['git', 'rev-parse', '--quiet', '--verify', 'HEAD']) \
          .set_directory (base_path) \
@@ -18,30 +21,30 @@ class GitTracker:
 
         return None
 
-    def diff(self, logger, base_path, work_path, rev_from, rev_to):
+    def diff(self, base_path, work_path, rev_from, rev_to):
         # Parse and validate source and target revisions
         if rev_from is None or rev_from == '':
             process = Process(['git', 'hash-object', '-t', 'tree', '/dev/null'])
         elif isinstance(rev_from, str):
             process = Process(['git', 'rev-parse', '--quiet', '--verify', rev_from])
         else:
-            logger.error('Corrupted source revision "{0}" (must be a valid Git hash).'.format(rev_from))
+            self.logger.error('Corrupted source revision "{0}" (must be a valid Git hash).'.format(rev_from))
 
             return None
 
         res_from = process.set_directory(base_path).execute()
 
         if not res_from:
-            logger.error(res_from.err.decode('utf-8'))
-            logger.error('Unknown source revision "{0}" (must be a valid Git tree-ish).'.format(rev_from))
+            self.logger.error(res_from.err.decode('utf-8'))
+            self.logger.error('Unknown source revision "{0}" (must be a valid Git tree-ish).'.format(rev_from))
 
             return None
 
         res_to = Process(['git', 'rev-parse', '--quiet', '--verify', rev_to]).set_directory(base_path).execute()
 
         if not res_to:
-            logger.error(res_to.err.decode('utf-8'))
-            logger.error('Unknown target revision "{0}" (must be a valid Git tree-ish).'.format(rev_to))
+            self.logger.error(res_to.err.decode('utf-8'))
+            self.logger.error('Unknown target revision "{0}" (must be a valid Git tree-ish).'.format(rev_to))
 
             return None
 
@@ -53,9 +56,10 @@ class GitTracker:
             f = hash_from[0:8]
             t = hash_to[0:8]
 
-            logger.info('Update from revision ((fuchsia)){0}((default)) to ((fuchsia)){1}((default)).'.format(f, t))
+            self.logger.info('Update from revision ((fuchsia)){0}((default)) to ((fuchsia)){1}((default)).'.format(
+                f, t))
         else:
-            logger.info('Already at revision ((fuchsia)){0}((default)).'.format(hash_from[0:8]))
+            self.logger.info('Already at revision ((fuchsia)){0}((default)).'.format(hash_from[0:8]))
 
             return []
 
@@ -69,16 +73,16 @@ class GitTracker:
             archive = Process(archive_args).set_directory(base_path).execute()
 
             if not archive:
-                logger.error(archive.err.decode('utf-8'))
-                logger.error('Couldn\'t export archive from Git.')
+                self.logger.error(archive.err.decode('utf-8'))
+                self.logger.error('Couldn\'t export archive from Git.')
 
                 return None
 
             extract = Process(['tar', 'xf', temp_path]).set_directory(work_path).execute()
 
             if not extract:
-                logger.error(extract.err.decode('utf-8'))
-                logger.error('Couldn\'t extract Git archive to temporary directory.')
+                self.logger.error(extract.err.decode('utf-8'))
+                self.logger.error('Couldn\'t extract Git archive to temporary directory.')
 
                 return None
         finally:
@@ -89,8 +93,8 @@ class GitTracker:
         diff = Process(diff_args).set_directory(base_path).execute()
 
         if not diff:
-            logger.error(diff.err.decode('utf-8'))
-            logger.error('Couldn\'t get diff from Git.')
+            self.logger.error(diff.err.decode('utf-8'))
+            self.logger.error('Couldn\'t get diff from Git.')
 
             return None
 

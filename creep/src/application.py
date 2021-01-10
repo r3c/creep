@@ -143,7 +143,7 @@ class Application:
 
         try:
             # Append actions from revision diff
-            tracker_actions = tracker.diff(self.logger, source, work_path, rev_from, rev_to)
+            tracker_actions = tracker.diff(source, work_path, rev_from, rev_to)
 
             if tracker_actions is None:
                 return False

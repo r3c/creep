@@ -8,9 +8,10 @@ from .. import path
 
 
 class HashTracker:
-    def __init__(self, options):
+    def __init__(self, logger, options):
         self.algorithm = options.get('algorithm', 'md5')
         self.follow = options.get('follow', True)
+        self.logger = logger
 
     def current(self, base_path):
         entries = {}
@@ -31,18 +32,18 @@ class HashTracker:
 
         return entries
 
-    def diff(self, logger, base_path, work_path, rev_from, rev_to):
+    def diff(self, base_path, work_path, rev_from, rev_to):
         rev_from_or_empty = rev_from or {}
         rev_to_or_empty = rev_to or {}
 
         if not isinstance(rev_from_or_empty, dict):
-            logger.error('Corrupted source revision "{0}".'.format(rev_from))
+            self.logger.error('Corrupted source revision "{0}".'.format(rev_from))
 
             return None
 
         actions = self.recurse(base_path, work_path, '.', rev_from_or_empty, rev_to_or_empty)
 
-        logger.info('((fuchsia)){0}((default)) file(s) changed.'.format(len(actions)))
+        self.logger.info('((fuchsia)){0}((default)) file(s) changed.'.format(len(actions)))
 
         return actions
 

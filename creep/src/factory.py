@@ -77,12 +77,12 @@ def create_tracker(logger, tracker, options, base_path):
     if tracker == 'delta' or tracker == 'hash':
         from .trackers.hash import HashTracker
 
-        return HashTracker(options)
+        return HashTracker(logger, options)
 
     if tracker == 'git':
         from .trackers.git import GitTracker
 
-        return GitTracker()
+        return GitTracker(logger)
 
     # No known tracker type recognized
     logger.error('Unsupported tracker type "{0}" in definition file.'.format(tracker))
