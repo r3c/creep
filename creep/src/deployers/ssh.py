@@ -25,8 +25,8 @@ class SSHDeployer:
         result = Process(self.tunnel + [command]).execute()
 
         if not result:
-            logger.warning('Couldn\'t read file \'{0}\' from SSH deployer.'.format(relative))
-            logger.debug(result.err.decode('utf-8'))
+            logger.error(result.err.decode('utf-8'))
+            logger.error('Couldn\'t read file \'{0}\' from SSH deployer.'.format(relative))
 
             return None
 
@@ -55,8 +55,8 @@ class SSHDeployer:
                 result = Process(self.tunnel + arguments).set_input(archive.read()).execute()
 
                 if not result:
-                    logger.warning('Couldn\'t push files to SSH deployer.')
-                    logger.debug(result.err.decode('utf-8'))
+                    logger.error(result.err.decode('utf-8'))
+                    logger.error('Couldn\'t push files to SSH deployer.')
 
                     return False
 
@@ -65,8 +65,8 @@ class SSHDeployer:
                 result = Process(self.tunnel + ['sh']).set_input(commands.encode('utf-8')).execute()
 
                 if not result:
-                    logger.warning('Couldn\'t delete files from SSH deployer.')
-                    logger.debug(result.err.decode('utf-8'))
+                    logger.error(result.err.decode('utf-8'))
+                    logger.error('Couldn\'t delete files from SSH deployer.')
 
                     return False
 

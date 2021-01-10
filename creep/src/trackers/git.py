@@ -29,23 +29,19 @@ class GitTracker:
 
             return None
 
-        res_from = process \
-         .set_directory (base_path) \
-         .execute ()
+        res_from = process.set_directory(base_path).execute()
 
         if not res_from:
+            logger.error(res_from.err.decode('utf-8'))
             logger.error('Unknown source revision "{0}" (must be a valid Git tree-ish).'.format(rev_from))
-            logger.debug(res_from.err.decode('utf-8'))
 
             return None
 
-        res_to = Process (['git', 'rev-parse', '--quiet', '--verify', rev_to]) \
-         .set_directory (base_path) \
-         .execute ()
+        res_to = Process(['git', 'rev-parse', '--quiet', '--verify', rev_to]).set_directory(base_path).execute()
 
         if not res_to:
+            logger.error(res_to.err.decode('utf-8'))
             logger.error('Unknown target revision "{0}" (must be a valid Git tree-ish).'.format(rev_to))
-            logger.debug(res_to.err.decode('utf-8'))
 
             return None
 
@@ -73,25 +69,24 @@ class GitTracker:
             archive = Process(archive_args).set_directory(base_path).execute()
 
             if not archive:
+                logger.error(archive.err.decode('utf-8'))
                 logger.error('Couldn\'t export archive from Git.')
-                logger.debug(archive.err.decode('utf-8'))
 
                 return None
 
             extract = Process(['tar', 'xf', temp_path]).set_directory(work_path).execute()
 
             if not extract:
+                logger.error(extract.err.decode('utf-8'))
                 logger.error('Couldn\'t extract Git archive to temporary directory.')
-                logger.debug(extract.err.decode('utf-8'))
 
                 return None
         finally:
             os.remove(temp_path)
 
         # Build actions from Git diff output
-        diff = Process (['git', 'diff', '--name-status', '--relative', hash_from, hash_to]) \
-         .set_directory (base_path) \
-         .execute ()
+        diff_args = ['git', 'diff', '--name-status', '--relative', hash_from, hash_to]
+        diff = Process(diff_args).set_directory(base_path).execute()
 
         if not diff:
             logger.error(diff.err.decode('utf-8'))
