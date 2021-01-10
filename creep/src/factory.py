@@ -50,12 +50,12 @@ def create_deployer(logger, connection, options, base_path):
 
         from .deployers.file import FileDeployer
 
-        return FileDeployer(os.path.join(base_path, directory))
+        return FileDeployer(logger, os.path.join(base_path, directory))
 
     if scheme == 'ftp':
         from .deployers.ftp import FTPDeployer
 
-        return FTPDeployer(host, port, user, password, directory, options)
+        return FTPDeployer(logger, host, port, user, password, directory, options)
 
     if scheme == 'ssh':
         if password is not None:
@@ -63,7 +63,7 @@ def create_deployer(logger, connection, options, base_path):
 
         from .deployers.ssh import SSHDeployer
 
-        return SSHDeployer(host, port, user, directory, options)
+        return SSHDeployer(logger, host, port, user, directory, options)
 
     # No known scheme recognized
     logger.error('Unsupported scheme in connection string "{0}".'.format(connection))

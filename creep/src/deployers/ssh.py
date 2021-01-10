@@ -11,14 +11,15 @@ from ..process import Process
 
 
 class SSHDeployer:
-    def __init__(self, host, port, user, directory, options):
+    def __init__(self, logger, host, port, user, directory, options):
         extra = shlex.split(options.get('extra', ''))
         remote = str((user or os.getusername()) + '@' + (host or 'localhost'))
 
         self.directory = directory
+        self.logger = logger
         self.tunnel = ['ssh', '-T', '-p', str(port or 22)] + extra + [remote]
 
-    def read(self, logger, relative):
+    def read(self, relative):
         base = shlex.quote(self.directory)
         path = shlex.quote(self.directory + '/' + relative)
 
@@ -26,14 +27,14 @@ class SSHDeployer:
         result = self._remote_command(arguments).execute()
 
         if not result:
-            logger.error(result.err.decode('utf-8'))
-            logger.error('Couldn\'t read file \'{0}\' from SSH deployer.'.format(relative))
+            self.logger.error(result.err.decode('utf-8'))
+            self.logger.error('Couldn\'t read file \'{0}\' from SSH deployer.'.format(relative))
 
             return None
 
         return result.out
 
-    def send(self, logger, work, actions):
+    def send(self, work, actions):
         with tempfile.TemporaryFile() as archive:
             to_add = False
             to_del = []
@@ -56,8 +57,8 @@ class SSHDeployer:
                 result = self._remote_command(arguments).set_input(archive.read()).execute()
 
                 if not result:
-                    logger.error(result.err.decode('utf-8'))
-                    logger.error('Couldn\'t push files to SSH deployer.')
+                    self.logger.error(result.err.decode('utf-8'))
+                    self.logger.error('Couldn\'t push files to SSH deployer.')
 
                     return False
 
@@ -66,8 +67,8 @@ class SSHDeployer:
                 result = self._remote_command(['sh']).set_input(commands.encode('utf-8')).execute()
 
                 if not result:
-                    logger.error(result.err.decode('utf-8'))
-                    logger.error('Couldn\'t delete files from SSH deployer.')
+                    self.logger.error(result.err.decode('utf-8'))
+                    self.logger.error('Couldn\'t delete files from SSH deployer.')
 
                     return False
 

@@ -10,15 +10,16 @@ from .. import path
 
 
 class FTPDeployer:
-    def __init__(self, host, port, user, password, directory, options):
+    def __init__(self, logger, host, port, user, password, directory, options):
         self.directory = directory
         self.host = host or 'localhost'
+        self.logger = logger
         self.options = options
         self.port = port or 21
         self.password = password
         self.user = user
 
-    def connect(self, logger):
+    def connect(self):
         ftp = ftplib.FTP()
         ftp.connect(self.host, self.port)
 
@@ -32,11 +33,11 @@ class FTPDeployer:
             ftp.set_pasv(self.options.get('passive', True))
         except ftplib.all_errors as e:
             if e.args[0].startswith('530 '):
-                logger.warning('Can\'t authenticate as \'{0}\' on remote FTP: \'{1}\''.format(self.user, e))
+                self.logger.error('Can\'t authenticate as \'{0}\' on remote FTP: \'{1}\''.format(self.user, e))
             elif e.args[0].startswith('550 '):
-                logger.warning('Can\'t access folder \'{0}\' on remote FTP: \'{1}\''.format(self.directory, e))
+                self.logger.error('Can\'t access folder \'{0}\' on remote FTP: \'{1}\''.format(self.directory, e))
             else:
-                logger.warning('Unknown FTP error: \'{0}\''.format(e))
+                self.logger.error('Unknown FTP error: \'{0}\''.format(e))
 
             ftp.quit()
 
@@ -47,8 +48,8 @@ class FTPDeployer:
     def escape(self, path):
         return path  # FIXME: wrong escape [ftp-escape]
 
-    def read(self, logger, relative):
-        ftp = self.connect(logger)
+    def read(self, relative):
+        ftp = self.connect()
 
         if ftp is None:
             return None
@@ -63,15 +64,15 @@ class FTPDeployer:
                 if e.args[0].startswith('550 '):  # no such file or directory
                     return ''
 
-                logger.warning('Can\'t read file \'{0}\' from FTP remote: {1}'.format(relative, e))
+                self.logger.warning('Can\'t read file \'{0}\' from FTP remote: {1}'.format(relative, e))
 
                 return None
 
             finally:
                 ftp.quit()
 
-    def send(self, logger, work, actions):
-        ftp = self.connect(logger)
+    def send(self, work, actions):
+        ftp = self.connect()
 
         if ftp is None:
             return None
@@ -115,7 +116,7 @@ class FTPDeployer:
                                 raise e
 
         except ftplib.all_errors as e:
-            logger.warning('Can\'t deploy to FTP remote: {0}'.format(e))
+            self.logger.error('Can\'t deploy to FTP remote: {0}'.format(e))
 
             return False
 

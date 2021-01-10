@@ -4,10 +4,13 @@ from ..action import Action
 
 
 class ConsoleDeployer:
-    def read(self, logger, relative):
+    def __init__(self, logger):
+        self.logger = logger
+
+    def read(self, relative):
         raise Exception('can\'t read from console deployer')
 
-    def send(self, logger, work, actions):
+    def send(self, work, actions):
         for action in actions:
             if action.type == action.ADD:
                 prefix = '((lime))+'
@@ -18,6 +21,6 @@ class ConsoleDeployer:
             else:
                 continue
 
-            logger.info(prefix + '((reset)) ' + action.path)
+            self.logger.info(prefix + '((reset)) ' + action.path)
 
         return True

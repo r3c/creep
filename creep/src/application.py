@@ -99,7 +99,7 @@ class Application:
         location_state_path = os.path.join(source, location.state)
 
         if not location.local:
-            data = deployer.read(self.logger, location.state)
+            data = deployer.read(location.state)
         elif os.path.exists(location_state_path):
             data = open(location_state_path, 'rb').read()
         else:
@@ -203,8 +203,8 @@ class Application:
 
             from .deployers.console import ConsoleDeployer
 
-            console = ConsoleDeployer()
-            console.send(self.logger, work_path, actions)
+            console = ConsoleDeployer(self.logger)
+            console.send(work_path, actions)
 
             if not self.__prompt('Deploy? [Y/N]'):
                 return True
@@ -212,7 +212,7 @@ class Application:
             # Execute processed actions after ordering them by precedence
             actions.sort(key=lambda action: (action.order(), action.path))
 
-            if not deployer.send(self.logger, work_path, actions):
+            if not deployer.send(work_path, actions):
                 return False
 
             # Update current revision (local mode)
