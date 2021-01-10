@@ -2,7 +2,6 @@
 
 import io
 import os
-import pipes
 import shlex
 import tarfile
 import tempfile
@@ -20,9 +19,11 @@ class SSHDeployer:
         self.tunnel = ['ssh', '-T', '-p', str(port or 22)] + extra + [remote]
 
     def read(self, logger, relative):
-        command = 'test -d \'{0}\' && ( test ! -f \'{1}\' || cat \'{1}\' )'.format(
-            pipes.quote(self.directory), pipes.quote(self.directory + '/' + relative))
-        result = Process(self.tunnel + [command]).execute()
+        base = shlex.quote(self.directory)
+        path = shlex.quote(self.directory + '/' + relative)
+
+        arguments = ['test', '-d', base, '&&', '(', 'test', '!', '-f', path, '||', 'cat', path, ')']
+        result = self._remote_command(arguments).execute()
 
         if not result:
             logger.error(result.err.decode('utf-8'))
@@ -51,8 +52,8 @@ class SSHDeployer:
 
             # Send and delete files on remote host
             if to_add:
-                arguments = ['tar xC \'' + pipes.quote(self.directory) + '\'']
-                result = Process(self.tunnel + arguments).set_input(archive.read()).execute()
+                arguments = ['tar', 'xC', shlex.quote(self.directory)]
+                result = self._remote_command(arguments).set_input(archive.read()).execute()
 
                 if not result:
                     logger.error(result.err.decode('utf-8'))
@@ -61,8 +62,8 @@ class SSHDeployer:
                     return False
 
             if len(to_del) > 0:
-                commands = ';'.join(['rm -f \'' + pipes.quote(path) + '\'' for path in to_del])
-                result = Process(self.tunnel + ['sh']).set_input(commands.encode('utf-8')).execute()
+                commands = ';'.join(['rm -f \'' + shlex.quote(path) + '\'' for path in to_del])
+                result = self._remote_command(['sh']).set_input(commands.encode('utf-8')).execute()
 
                 if not result:
                     logger.error(result.err.decode('utf-8'))
@@ -71,3 +72,8 @@ class SSHDeployer:
                     return False
 
         return True
+
+    def _remote_command(self, arguments):
+        command = ' '.join(arguments)
+
+        return Process(self.tunnel + [command])
