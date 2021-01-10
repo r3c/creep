@@ -21,36 +21,20 @@ class Process:
         self.args = args
         self.directory = None
         self.input = None
-        self.parent = None
         self.shell = False
         self.stdin = None
 
-    def _open(self, stdout):
+    def execute(self):
         process = subprocess.Popen(self.args,
                                    cwd=self.directory,
                                    shell=self.shell,
                                    stderr=subprocess.PIPE,
                                    stdin=self.stdin,
-                                   stdout=stdout)
-
-        if self.parent is not None:
-            self.parent._open(process.stdin)
-
-        return process
-
-    def execute(self):
-        process = self._open(subprocess.PIPE)
+                                   stdout=subprocess.PIPE)
 
         (out, err) = process.communicate(self.input)
 
         return ProcessResult(process.returncode, out, err)
-
-    def pipe(self, args):
-        next = Process(args)
-        next.parent = self
-        next.stdin = subprocess.PIPE
-
-        return next
 
     def set_directory(self, directory):
         self.directory = directory

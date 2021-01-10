@@ -3,6 +3,9 @@
 from ..action import Action
 from ..process import Process
 
+import os
+import tempfile
+
 
 class GitTracker:
     def current(self, base_path):
@@ -61,16 +64,29 @@ class GitTracker:
             return []
 
         # Populate work directory from Git archive
-        archive = Process (['git', 'archive', hash_to, '.']) \
-         .set_directory (base_path) \
-         .pipe (['tar', 'xC', work_path]) \
-         .execute ()
+        (temp_file, temp_path) = tempfile.mkstemp()
 
-        if not archive:
-            logger.error('Couldn\'t export archive from Git.')
-            logger.debug(archive.err.decode('utf-8'))
+        try:
+            os.close(temp_file)
 
-            return None
+            archive_args = ['git', 'archive', '--output', temp_path, hash_to, '.']
+            archive = Process(archive_args).set_directory(base_path).execute()
+
+            if not archive:
+                logger.error('Couldn\'t export archive from Git.')
+                logger.debug(archive.err.decode('utf-8'))
+
+                return None
+
+            extract = Process(['tar', 'xf', temp_path]).set_directory(work_path).execute()
+
+            if not extract:
+                logger.error('Couldn\'t extract Git archive to temporary directory.')
+                logger.debug(extract.err.decode('utf-8'))
+
+                return None
+        finally:
+            os.remove(temp_path)
 
         # Build actions from Git diff output
         diff = Process (['git', 'diff', '--name-status', '--relative', hash_from, hash_to]) \
@@ -78,8 +94,8 @@ class GitTracker:
          .execute ()
 
         if not diff:
+            logger.error(diff.err.decode('utf-8'))
             logger.error('Couldn\'t get diff from Git.')
-            logger.debug(diff.err.decode('utf-8'))
 
             return None
 
