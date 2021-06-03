@@ -10,17 +10,22 @@ from .. import path
 
 
 class FTPDeployer:
-    def __init__(self, logger, host, port, user, password, directory, options):
+    def __init__(self, logger, secure, host, port, user, password, directory, options):
         self.directory = directory
         self.host = host or 'localhost'
         self.logger = logger
         self.options = options
         self.port = port or 21
         self.password = password
+        self.secure = secure
         self.user = user
 
     def connect(self):
-        ftp = ftplib.FTP()
+        if self.secure:
+            ftp = ftplib.FTP_TLS()
+        else:
+            ftp = ftplib.FTP()
+
         ftp.connect(self.host, self.port)
 
         try:

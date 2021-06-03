@@ -159,11 +159,12 @@ and available options:
   - Use connection format `file:///path` where path is relative to source
     directory.
   - Note the use of triple slash `///` because file protocol has no hostname.
-- FTP:
+- FTP or FTPs:
   - Use connection format `ftp://user:pass@host:port/path` where `user` and
     `pass` are optional credentials (anonymous login will be used if they're
     missing), `port` is an optional FTP port which defaults to 21, and `path` is
     a path relative to FTP user home directory.
+  - Use scheme `ftps://` instead of `ftp://` to enable TLS support.
   - Boolean option `passive` enables (default) or disables passive mode.
 - SSH:
   - Use connection format `ssh://user@host:port/path` with same variables than

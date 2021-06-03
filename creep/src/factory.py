@@ -52,10 +52,10 @@ def create_deployer(logger, connection, options, base_path):
 
         return FileDeployer(logger, os.path.join(base_path, directory))
 
-    if scheme == 'ftp':
+    if scheme == 'ftp' or scheme == 'ftps':
         from .deployers.ftp import FTPDeployer
 
-        return FTPDeployer(logger, host, port, user, password, directory, options)
+        return FTPDeployer(logger, scheme == 'ftps', host, port, user, password, directory, options)
 
     if scheme == 'ssh':
         if password is not None:
