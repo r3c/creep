@@ -33,7 +33,7 @@ class Application:
                 location_names = definition.environment.locations.keys()
 
             # Search for undefined locations
-            locations = [(name, definition.environment.get_location(name)) for name in location_names]
+            locations = [(name, definition.environment.locations.get(name, None)) for name in location_names]
             names = list(map(lambda i: i[0], filter(lambda item: item[1] is None, locations)))
 
             if len(names) > 0:

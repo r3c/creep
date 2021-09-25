@@ -250,9 +250,6 @@ class Environment:
         self.locations = locations
         self.path = path
 
-    def get_location(self, name):
-        return self.locations.get(name, None)
-
 
 def __extract_field(parent, source, key, alternatives=[]):
     value = source.pop(key, None)
