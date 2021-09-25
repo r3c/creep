@@ -22,7 +22,7 @@ setup(name='creep',
       classifiers=[
           'Development Status :: 4 - Beta', 'Environment :: Console', 'Intended Audience :: Developers',
           'Intended Audience :: System Administrators', 'License :: OSI Approved :: MIT License',
-          'Programming Language :: Python :: 2.7', 'Topic :: Software Development :: Build Tools',
+          'Programming Language :: Python :: 3.9', 'Topic :: Software Development :: Build Tools',
           'Topic :: System :: Archiving :: Mirroring', 'Topic :: System :: Software Distribution'
       ],
       install_requires=['setuptools>=1.0'],
