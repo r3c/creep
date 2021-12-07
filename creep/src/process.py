@@ -17,15 +17,15 @@ class ProcessResult:
 
 
 class Process:
-    def __init__(self, args):
-        self.args = args
+    def __init__(self, arguments):
+        self.arguments = arguments
         self.directory = None
         self.input = None
         self.shell = False
         self.stdin = None
 
     def execute(self):
-        process = subprocess.Popen(self.args,
+        process = subprocess.Popen(self.arguments,
                                    cwd=self.directory,
                                    shell=self.shell,
                                    stderr=subprocess.PIPE,
