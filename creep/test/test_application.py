@@ -425,14 +425,14 @@ class ApplicationTester(unittest.TestCase):
                     "modify": "sed -r 's/a/b/g' '{}'"
                 }]
             }))
-        self.create_file('source/aaa', b'aaa')
-        self.create_file('source/bbb', b'bbb')
+        self.create_file('source/a a', b'aaa')
+        self.create_file('source/b b', b'bbb')
 
         self.deploy('source', ['default'])
 
         self.assert_file('target/.creep.def', None)
-        self.assert_file('target/aaa', b'bbb')
-        self.assert_file('target/bbb', b'bbb')
+        self.assert_file('target/a a', b'bbb')
+        self.assert_file('target/b b', b'bbb')
 
     def test_deploy_using_definition_path_with_modifier_rename(self):
         self.create_directory('target')
