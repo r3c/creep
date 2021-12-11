@@ -60,7 +60,12 @@ class Configuration:
                 with open(config_path, 'rb') as file:
                     contents = file.read().decode('utf-8')
 
-                root = json.loads(contents)
+                try:
+                    root = json.loads(contents)
+                except json.JSONDecodeError as error:
+                    self.log_error('Invalid JSON file: {error}', error=error)
+
+                    return None
             else:
                 root = {}
 
