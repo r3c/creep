@@ -3,6 +3,7 @@
 import json
 import os
 import re
+import shlex
 import shutil
 import urllib.parse
 
@@ -225,7 +226,8 @@ class Definition:
         self.modifiers.append(DefinitionModifier(regex, None, None, None, 0o644, ''))
 
     def run(self, base_directory, path, command):
-        result = Process(command.replace('{}', path)).set_directory(base_directory).set_shell(True).execute()
+        arguments = command.replace('{}', shlex.quote(path))
+        result = Process(arguments).set_directory(base_directory).set_shell(True).execute()
 
         if not result:
             self.logger.debug(result.err.decode('utf-8'))
