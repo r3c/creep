@@ -4,6 +4,7 @@ import io
 import json
 import logging
 import os
+import platform
 import re
 import sys
 import tarfile
@@ -292,6 +293,9 @@ class ApplicationTester(unittest.TestCase):
         self.assert_file('target/a/a', b'aaa')
 
     def test_modifier_chmod(self):
+        if platform.system() == 'Windows':  # os.chmod can only remove user write flag on Windows
+            return
+
         self.create_directory('target')
         self.create_file(
             'source/.creep.def',
@@ -302,19 +306,22 @@ class ApplicationTester(unittest.TestCase):
                     }
                 },
                 "modifiers": [{
-                    "pattern": "^.$",
-                    "chmod": "751"
+                    "pattern": "^a$",
+                    "chmod": "426"
+                }, {
+                    "pattern": "^b$",
+                    "chmod": "642"
                 }]
             }))
         self.create_file('target/.creep.rev', _get_json({"default": {"a": "dummy", "b": "dummy"}}))
         self.create_file('source/a', b'a')
-        self.create_file('target/b', b'b')
+        self.create_file('source/b', b'b')
 
         self.deploy('source', ['default'])
 
         self.assert_file('target/.creep.def', None)
-        self.assert_file('target/a', b'a', 0o751)
-        self.assert_file('target/b')
+        self.assert_file('target/a', b'a', 0o426)
+        self.assert_file('target/b', b'b', 0o642)
 
     def test_modifier_filter_false(self):
         self.create_directory('target')
