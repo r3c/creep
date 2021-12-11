@@ -4,6 +4,7 @@ import io
 import json
 import logging
 import os
+import re
 import sys
 import tarfile
 import tempfile
@@ -71,7 +72,7 @@ class ApplicationTester(unittest.TestCase):
         application = Application(logger, True)
         definition = load(logger, self.directory.name, config)
 
-        self.assertFalse(definition is None)
+        self.assertIsNotNone(definition)
         self.assertTrue(application.run(definition, location_names, [], [], None, None))
 
     def test_cascade_inline(self):
@@ -175,6 +176,16 @@ class ApplicationTester(unittest.TestCase):
 
         self.assert_file('target/aaa', b'a')
 
+    def test_definition_invalid(self):
+        self.create_file('.creep.def', b'invalid')
+
+        with self.assertLogs() as captured:
+            definition = load(logging.getLogger(), self.directory.name, '.')
+
+            self.assertIsNone(definition)
+            self.assertEqual(len(captured.records), 1)
+            self.assertRegex(captured.records[0].getMessage(), 'Invalid JSON file.*' + re.escape(self.directory.name))
+
     def test_definition_path(self):
         self.create_directory('target')
         self.create_file('definition/.creep.def', _get_json({"environment": "../environment", "origin": "../source"}))
@@ -199,6 +210,16 @@ class ApplicationTester(unittest.TestCase):
 
         self.assert_file('target/.creep.env', None)
         self.assert_file('target/aaa', b'a')
+
+    def test_environment_invalid(self):
+        self.create_file('.creep.env', b'invalid')
+
+        with self.assertLogs() as captured:
+            definition = load(logging.getLogger(), self.directory.name, '.')
+
+            self.assertIsNone(definition)
+            self.assertEqual(len(captured.records), 1)
+            self.assertRegex(captured.records[0].getMessage(), 'Invalid JSON file.*' + re.escape(self.directory.name))
 
     def test_environment_path(self):
         self.create_directory('target')
