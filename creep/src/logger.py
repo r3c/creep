@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 
 import logging
+import os
+import platform
 import re
 
 
@@ -57,6 +59,9 @@ class ColorStreamHandler(logging.StreamHandler):
             template = self.format(record)
 
             if not self.no_color and self.is_tty():
+                if platform.system() == 'Windows':
+                    os.system("color")  # See: https://stackoverflow.com/a/64222858
+
                 prefix_name = self.levels.get(record.levelno, 'reset')
                 prefix = self.COLOR_BEGIN + prefix_name + self.COLOR_END
                 default = self.colors.get(prefix_name, self.RESET)
