@@ -1,7 +1,7 @@
 Creep README file
 =================
 
-[![Build Status](https://travis-ci.org/r3c/creep.svg?branch=master)](https://travis-ci.org/r3c/creep)
+[![Build Status](https://img.shields.io/github/actions/workflow/status/r3c/creep/python-package.yml?branch=master)](https://github.com/r3c/creep/actions)
 
 Overview
 --------
