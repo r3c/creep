@@ -4,6 +4,7 @@ import json
 
 
 class Revision:
+
     def __init__(self, data):
         states = {}
 

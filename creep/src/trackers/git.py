@@ -8,6 +8,7 @@ import tempfile
 
 
 class GitTracker:
+
     def __init__(self, logger):
         self.logger = logger
 

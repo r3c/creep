@@ -16,6 +16,7 @@ def _join_path(a, b):
 
 
 class Application:
+
     def __init__(self, logger, yes):
         self.logger = logger
         self.yes = yes

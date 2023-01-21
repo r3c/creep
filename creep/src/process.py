@@ -4,6 +4,7 @@ import subprocess
 
 
 class ProcessResult:
+
     def __init__(self, code, out, err):
         self.code = code
         self.err = err
@@ -17,6 +18,7 @@ class ProcessResult:
 
 
 class Process:
+
     def __init__(self, arguments):
         self.arguments = arguments
         self.directory = None

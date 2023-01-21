@@ -11,6 +11,7 @@ from ..process import Process
 
 
 class SSHDeployer:
+
     def __init__(self, logger, host, port, user, directory, options):
         extra = shlex.split(options.get('extra', ''))
         remote = str((user or os.getusername()) + '@' + (host or 'localhost'))

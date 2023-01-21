@@ -10,6 +10,7 @@ from .. import path
 
 
 class FTPDeployer:
+
     def __init__(self, logger, secure, host, port, user, password, directory, options):
         self.directory = directory
         self.host = host or 'localhost'

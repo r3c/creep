@@ -21,6 +21,7 @@ def _get_json(obj):
 
 
 class ApplicationTester(unittest.TestCase):
+
     def setUp(self):
         self.directory = tempfile.TemporaryDirectory()
 

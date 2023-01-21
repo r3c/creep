@@ -8,6 +8,7 @@ from .. import path
 
 
 class HashTracker:
+
     def __init__(self, logger, options):
         self.algorithm = options.get('algorithm', 'md5')
         self.follow = options.get('follow', True)

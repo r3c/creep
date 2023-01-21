@@ -81,6 +81,7 @@ class ColorStreamHandler(logging.StreamHandler):
 
 
 class IndentLoggerAdapter(logging.LoggerAdapter):
+
     def __init__(self, logger, extra):
         super(IndentLoggerAdapter, self).__init__(logger, extra)
 
@@ -97,6 +98,7 @@ class IndentLoggerAdapter(logging.LoggerAdapter):
 
 
 class Logger:
+
     @staticmethod
     def build(level, no_color):
         formatter = logging.Formatter('%(levelname)s: %(message)s')

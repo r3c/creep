@@ -4,6 +4,7 @@ from ..action import Action
 
 
 class ConsoleDeployer:
+
     def __init__(self, logger):
         self.logger = logger
 

@@ -16,6 +16,7 @@ def _join_path(a, b):
 
 
 class Configuration:
+
     def __init__(self, logger, path, position, value, undefined):
         self.logger = logger
         self.path = path
@@ -118,6 +119,7 @@ class Configuration:
 
 
 class DefinitionModifier:
+
     def __init__(self, regex, rename, link, modify, chmod, filter):
         self.chmod = chmod
         self.filter = filter
@@ -128,6 +130,7 @@ class DefinitionModifier:
 
 
 class Definition:
+
     def __init__(self, logger, origin, environment, tracker, options, cascades, modifiers, path):
         self.cascades = cascades
         self.environment = environment
@@ -243,6 +246,7 @@ class Definition:
 
 
 class EnvironmentLocation:
+
     def __init__(self, append_files, connection, local, options, remove_files, state):
         self.append_files = append_files
         self.connection = connection
@@ -253,6 +257,7 @@ class EnvironmentLocation:
 
 
 class Environment:
+
     def __init__(self, locations, path):
         self.locations = locations
         self.path = path

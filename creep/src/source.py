@@ -13,6 +13,7 @@ class Source:
     * An HTTP or HTTPS URL to an archive file
     Archive and URL formats also supports an optional sub-path within the archive e.g. "archive.zip#usr/bin/"
     """
+
     def __init__(self, logger, path):
         self.cleaners = []
         self.logger = logger

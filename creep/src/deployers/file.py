@@ -7,6 +7,7 @@ from .. import path
 
 
 class FileDeployer:
+
     def __init__(self, logger, directory):
         self.directory = directory
         self.logger = logger
