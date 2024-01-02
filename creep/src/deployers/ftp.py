@@ -85,7 +85,7 @@ class FTPDeployer:
 
         try:
             # Group actions by parent path
-            commands = [(head, tail, type)
+            commands = [(head.replace('\\', '/'), tail, type)
                         for ((head, tail), type) in ((os.path.split(action.path), action.type) for action in actions)]
 
             for (directory, files) in itertools.groupby(commands, lambda command: command[0]):
