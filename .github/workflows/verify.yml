@@ -23,7 +23,6 @@ jobs:
         python-version:
           - "3.9" # Security
           - "3.12" # Bugfix
-          - "3.14" # Feature
 
     steps:
       - uses: actions/checkout@v4
