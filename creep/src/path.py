@@ -34,14 +34,14 @@ def explode(path):
     """
 
     names = []
-    tail = '.'
+    tail = "."
 
-    while tail != '':
+    while tail != "":
         (path, tail) = os.path.split(path)
 
-        if tail != '':
+        if tail != "":
             names.insert(0, tail)
-        elif path != '':
+        elif path != "":
             names.insert(0, path)
 
     return names

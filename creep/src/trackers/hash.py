@@ -10,8 +10,8 @@ from .. import path
 class HashTracker:
 
     def __init__(self, logger, options):
-        self.algorithm = options.get('algorithm', 'md5')
-        self.follow = options.get('follow', True)
+        self.algorithm = options.get("algorithm", "md5")
+        self.follow = options.get("follow", True)
         self.logger = logger
 
     def current(self, base_path):
@@ -42,17 +42,21 @@ class HashTracker:
 
             return None
 
-        actions = self.recurse(base_path, work_path, '.', rev_from_or_empty, rev_to_or_empty)
+        actions = self.recurse(
+            base_path, work_path, ".", rev_from_or_empty, rev_to_or_empty
+        )
 
-        self.logger.info('((fuchsia)){0}((default)) file(s) changed.'.format(len(actions)))
+        self.logger.info(
+            "((fuchsia)){0}((default)) file(s) changed.".format(len(actions))
+        )
 
         return actions
 
     def digest(self, path):
         hash = hashlib.new(self.algorithm)
 
-        with open(path, 'rb') as file:
-            for chunk in iter(lambda: file.read(4096), b''):
+        with open(path, "rb") as file:
+            for chunk in iter(lambda: file.read(4096), b""):
                 hash.update(chunk)
 
         return hash.hexdigest()
@@ -69,21 +73,29 @@ class HashTracker:
             if isinstance(entry_from, dict):
                 # Path is still a directory => compare recursively
                 if isinstance(entry_to, dict):
-                    actions.extend(self.recurse(base_path, work_path, source, entry_from, entry_to))
+                    actions.extend(
+                        self.recurse(base_path, work_path, source, entry_from, entry_to)
+                    )
 
                 # Path is no longer a directory
                 else:
                     # Path is now a file => add
-                    if entry_to is not None and path.duplicate(os.path.join(base_path, source), work_path, source):
+                    if entry_to is not None and path.duplicate(
+                        os.path.join(base_path, source), work_path, source
+                    ):
                         actions.append(Action(source, Action.ADD))
 
                     # Recurse with no right hand side to delete contents
-                    actions.extend(self.recurse(base_path, work_path, source, entry_from, {}))
+                    actions.extend(
+                        self.recurse(base_path, work_path, source, entry_from, {})
+                    )
 
             # Path wasn't a directory on previous version but now is
             elif isinstance(entry_to, dict):
                 # Path was a file => delete
-                if entry_from is not None and path.duplicate(os.path.join(base_path, source), work_path, source):
+                if entry_from is not None and path.duplicate(
+                    os.path.join(base_path, source), work_path, source
+                ):
                     actions.append(Action(source, Action.DEL))
 
                 # Recurse with no left hand side to add contents
@@ -92,7 +104,9 @@ class HashTracker:
             # Path wasn't and isn't a directory but changed
             elif entry_from != entry_to:
                 # Path is now a file => add
-                if entry_to is not None and path.duplicate(os.path.join(base_path, source), work_path, source):
+                if entry_to is not None and path.duplicate(
+                    os.path.join(base_path, source), work_path, source
+                ):
                     actions.append(Action(source, Action.ADD))
 
                 # Path no longer exists => delete

@@ -13,7 +13,7 @@ class FTPDeployer:
 
     def __init__(self, logger, secure, host, port, user, password, directory, options):
         self.directory = directory
-        self.host = host or 'localhost'
+        self.host = host or "localhost"
         self.logger = logger
         self.options = options
         self.port = port or 21
@@ -36,14 +36,22 @@ class FTPDeployer:
             if self.directory:
                 ftp.cwd(self.directory)
 
-            ftp.set_pasv(self.options.get('passive', True))
+            ftp.set_pasv(self.options.get("passive", True))
         except ftplib.all_errors as e:
-            if e.args[0].startswith('530 '):
-                self.logger.error('Can\'t authenticate as \'{0}\' on remote FTP: \'{1}\''.format(self.user, e))
-            elif e.args[0].startswith('550 '):
-                self.logger.error('Can\'t access folder \'{0}\' on remote FTP: \'{1}\''.format(self.directory, e))
+            if e.args[0].startswith("530 "):
+                self.logger.error(
+                    "Can't authenticate as '{0}' on remote FTP: '{1}'".format(
+                        self.user, e
+                    )
+                )
+            elif e.args[0].startswith("550 "):
+                self.logger.error(
+                    "Can't access folder '{0}' on remote FTP: '{1}'".format(
+                        self.directory, e
+                    )
+                )
             else:
-                self.logger.error('Unknown FTP error: \'{0}\''.format(e))
+                self.logger.error("Unknown FTP error: '{0}'".format(e))
 
             ftp.quit()
 
@@ -62,15 +70,17 @@ class FTPDeployer:
 
         with io.BytesIO() as buffer:
             try:
-                ftp.retrbinary('RETR ' + self.escape(relative), buffer.write)
+                ftp.retrbinary("RETR " + self.escape(relative), buffer.write)
 
                 return buffer.getvalue()
 
             except ftplib.all_errors as e:
-                if e.args[0].startswith('550 '):  # no such file or directory
-                    return ''
+                if e.args[0].startswith("550 "):  # no such file or directory
+                    return ""
 
-                self.logger.warning('Can\'t read file \'{0}\' from FTP remote: {1}'.format(relative, e))
+                self.logger.warning(
+                    "Can't read file '{0}' from FTP remote: {1}".format(relative, e)
+                )
 
                 return None
 
@@ -85,44 +95,52 @@ class FTPDeployer:
 
         try:
             # Group actions by parent path
-            commands = [(head.replace('\\', '/'), tail, type)
-                        for ((head, tail), type) in ((os.path.split(action.path), action.type) for action in actions)]
+            commands = [
+                (head.replace("\\", "/"), tail, type)
+                for ((head, tail), type) in (
+                    (os.path.split(action.path), action.type) for action in actions
+                )
+            ]
 
-            for (directory, files) in itertools.groupby(commands, lambda command: command[0]):
+            for directory, files in itertools.groupby(
+                commands, lambda command: command[0]
+            ):
                 # Must create directory before uploading files to it
                 create = True
                 names = path.explode(directory)
 
                 # Append or delete files
-                for (head, tail, type) in files:
-                    target = self.escape(head and head + '/' + tail or tail)
+                for head, tail, type in files:
+                    target = self.escape(head and head + "/" + tail or tail)
 
                     if type == Action.ADD:
                         # Create missing parent directories
                         if create:
-                            for parent in ('/'.join(names[0:n + 1]) for n in range(0, len(names))):
+                            for parent in (
+                                "/".join(names[0 : n + 1]) for n in range(0, len(names))
+                            ):
                                 try:
                                     ftp.mkd(parent)
                                 except ftplib.all_errors as e:
-                                    if not e.args[0].startswith('550 '):
+                                    if not e.args[0].startswith("550 "):
                                         raise e
 
                             create = False
 
                         # Upload current file
-                        with open(os.path.join(work, head, tail), 'rb') as file:
-                            ftp.storbinary('STOR ' + target, file)
+                        with open(os.path.join(work, head, tail), "rb") as file:
+                            ftp.storbinary("STOR " + target, file)
 
                     elif type == Action.DEL:
                         # Delete file if exists
                         try:
                             ftp.delete(target)
                         except ftplib.all_errors as e:
-                            if not e.args[0].startswith('550 '):
+                            if not e.args[0].startswith("550 "):
                                 raise e
 
         except ftplib.all_errors as e:
-            self.logger.error('Can\'t deploy to FTP remote: {0}'.format(e))
+            self.logger.error("Can't deploy to FTP remote: {0}".format(e))
 
             return False
 

@@ -27,12 +27,14 @@ class Process:
         self.stdin = None
 
     def execute(self):
-        process = subprocess.Popen(self.arguments,
-                                   cwd=self.directory,
-                                   shell=self.shell,
-                                   stderr=subprocess.PIPE,
-                                   stdin=self.stdin,
-                                   stdout=subprocess.PIPE)
+        process = subprocess.Popen(
+            self.arguments,
+            cwd=self.directory,
+            shell=self.shell,
+            stderr=subprocess.PIPE,
+            stdin=self.stdin,
+            stdout=subprocess.PIPE,
+        )
 
         (out, err) = process.communicate(self.input)
 

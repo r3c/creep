@@ -33,10 +33,10 @@ jobs:
       - name: Install dependencies
         run: |
           python3 -m pip install --upgrade pip
-          python3 -m pip install yapf
+          python3 -m pip install black
       - name: Check style
         run: |
-          yapf --diff --recursive creep
+          python3 -m black --check creep
       - name: Test
         run: |
           python3 -m unittest
