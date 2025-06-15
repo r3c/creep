@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 
 import os
-import shutil
 
 from .. import path
 
@@ -23,26 +22,34 @@ class FileDeployer:
         if not os.path.isfile(source):
             self.logger.debug('Revision file "{0}" doesn\'t exist'.format(source))
 
-            return ''
+            return ""
 
         if not os.access(source, os.R_OK):
             self.logger.error('Revision file "{0}" cannot be read'.format(source))
 
             return None
 
-        with open(source, 'rb') as file:
+        with open(source, "rb") as file:
             return file.read()
 
     def send(self, work, actions):
         for action in actions:
             if action.type == action.ADD:
-                if not path.duplicate(os.path.join(work, action.path), self.directory, action.path):
-                    self.logger.error('Can\'t copy file "{1}" to target directory "{0}"'.format(
-                        self.directory, action.path))
+                if not path.duplicate(
+                    os.path.join(work, action.path), self.directory, action.path
+                ):
+                    self.logger.error(
+                        'Can\'t copy file "{1}" to target directory "{0}"'.format(
+                            self.directory, action.path
+                        )
+                    )
 
             elif action.type == action.DEL:
                 if not path.remove(self.directory, action.path):
-                    self.logger.error('Can\'t remove file "{1}" from target directory "{0}"'.format(
-                        self.directory, action.path))
+                    self.logger.error(
+                        'Can\'t remove file "{1}" from target directory "{0}"'.format(
+                            self.directory, action.path
+                        )
+                    )
 
         return True

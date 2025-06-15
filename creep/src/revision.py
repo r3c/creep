@@ -9,7 +9,7 @@ class Revision:
         states = {}
 
         if len(data) > 0:
-            for (name, rev) in json.loads(data.decode('utf-8')).items():
+            for name, rev in json.loads(data.decode("utf-8")).items():
                 states[name] = rev
 
         self.states = states

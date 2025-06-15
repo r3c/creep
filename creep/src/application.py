@@ -5,7 +5,6 @@ from .action import Action
 from .revision import Revision
 from .source import Source
 
-import json
 import os
 import shutil
 import tempfile
@@ -21,7 +20,9 @@ class Application:
         self.logger = logger
         self.yes = yes
 
-    def run(self, definition, location_names, append_files, remove_files, rev_from, rev_to):
+    def run(
+        self, definition, location_names, append_files, remove_files, rev_from, rev_to
+    ):
         # Compute origin path relative to definition file
         with Source(self.logger, definition.origin) as path:
             if path is None:
@@ -29,17 +30,25 @@ class Application:
 
             # Expand location names
             if len(location_names) < 1:
-                location_names = ['default']
-            elif len(location_names) == 1 and location_names[0] == '*':
+                location_names = ["default"]
+            elif len(location_names) == 1 and location_names[0] == "*":
                 location_names = definition.environment.locations.keys()
 
             # Search for undefined locations
-            locations = [(name, definition.environment.locations.get(name, None)) for name in location_names]
-            names = list(map(lambda i: i[0], filter(lambda item: item[1] is None, locations)))
+            locations = [
+                (name, definition.environment.locations.get(name, None))
+                for name in location_names
+            ]
+            names = list(
+                map(lambda i: i[0], filter(lambda item: item[1] is None, locations))
+            )
 
             if len(names) > 0:
-                self.logger.error('Location(s) missing from {environment}: {names}.'.format(
-                    environment=definition.environment.path, names=', '.join(names)))
+                self.logger.error(
+                    "Location(s) missing from {environment}: {names}.".format(
+                        environment=definition.environment.path, names=", ".join(names)
+                    )
+                )
 
                 return False
 
@@ -50,7 +59,16 @@ class Application:
 
                 self.logger.info('Deploying to location "{0}"...'.format(name))
 
-                success = self.__sync(path, definition, location, name, append_files, remove_files, rev_from, rev_to)
+                success = self.__sync(
+                    path,
+                    definition,
+                    location,
+                    name,
+                    append_files,
+                    remove_files,
+                    rev_from,
+                    rev_to,
+                )
 
                 if not success:
                     return False
@@ -78,23 +96,40 @@ class Application:
         while True:
             answer = input()
 
-            if answer == 'N' or answer == 'n':
+            if answer == "N" or answer == "n":
                 return False
-            elif answer == 'Y' or answer == 'y':
+            elif answer == "Y" or answer == "y":
                 return True
 
-            self.logger.warning('Invalid answer')
+            self.logger.warning("Invalid answer")
 
-    def __sync(self, source, definition, location, location_name, append_files, remove_files, rev_from, rev_to):
+    def __sync(
+        self,
+        source,
+        definition,
+        location,
+        location_name,
+        append_files,
+        remove_files,
+        rev_from,
+        rev_to,
+    ):
         # Build repository tracker from current directory and file deployer from location connection string
-        deployer = factory.create_deployer(self.logger, location.connection, location.options, source)
-        tracker = factory.create_tracker(self.logger, definition.tracker, definition.options, source)
+        deployer = factory.create_deployer(
+            self.logger, location.connection, location.options, source
+        )
+        tracker = factory.create_tracker(
+            self.logger, definition.tracker, definition.options, source
+        )
 
         if deployer is None or tracker is None:
             return False
 
-        self.logger.debug('Compare changes with "{tracker}" and deploy with "{deployer}"'.format(
-            deployer=type(deployer).__name__, tracker=type(tracker).__name__))
+        self.logger.debug(
+            'Compare changes with "{tracker}" and deploy with "{deployer}"'.format(
+                deployer=type(deployer).__name__, tracker=type(tracker).__name__
+            )
+        )
 
         # Read revision file
         location_state_path = os.path.join(source, location.state)
@@ -102,21 +137,25 @@ class Application:
         if not location.local:
             data = deployer.read(location.state)
         elif os.path.exists(location_state_path):
-            data = open(location_state_path, 'rb').read()
+            data = open(location_state_path, "rb").read()
         else:
-            data = ''
+            data = ""
 
         if data is None:
             self.logger.error(
                 'Can\'t read revision file "{0}", check connection string and ensure parent directory exists.'.format(
-                    location.state))
+                    location.state
+                )
+            )
 
             return False
 
         try:
             revision = Revision(data)
         except Exception as e:
-            self.logger.error('Can\'t parse revision from file "{0}": {1}.'.format(location.state, e))
+            self.logger.error(
+                'Can\'t parse revision from file "{0}": {1}.'.format(location.state, e)
+            )
 
             return False
 
@@ -125,7 +164,8 @@ class Application:
             rev_from = revision.get(location_name)
 
             if rev_from is None and not self.__prompt(
-                    'No current revision found, are you deploying for the first time? [Y/N]'):
+                "No current revision found, are you deploying for the first time? [Y/N]"
+            ):
                 return True
 
         if rev_to is None:
@@ -133,7 +173,8 @@ class Application:
 
             if rev_to is None:
                 self.logger.error(
-                    'Can\'t find source version, please ensure your environment file is correctly defined.')
+                    "Can't find source version, please ensure your environment file is correctly defined."
+                )
 
                 return False
 
@@ -156,29 +197,41 @@ class Application:
                 full_path = _join_path(source, append)
 
                 if os.path.isdir(full_path):
-                    for (dirpath, dirnames, filenames) in os.walk(full_path):
+                    for dirpath, dirnames, filenames in os.walk(full_path):
                         parent_path = os.path.relpath(dirpath, source)
 
                         manual_actions.extend(
-                            (Action(_join_path(parent_path, filename), Action.ADD) for filename in filenames))
+                            (
+                                Action(_join_path(parent_path, filename), Action.ADD)
+                                for filename in filenames
+                            )
+                        )
                 elif os.path.isfile(full_path):
                     manual_actions.append(Action(append, Action.ADD))
                 else:
-                    self.logger.warning('Can\'t append missing file "{0}".'.format(append))
+                    self.logger.warning(
+                        'Can\'t append missing file "{0}".'.format(append)
+                    )
 
             for action in manual_actions:
-                if not path.duplicate(_join_path(source, action.path), work_path, action.path):
+                if not path.duplicate(
+                    _join_path(source, action.path), work_path, action.path
+                ):
                     self.logger.warning('Can\'t copy file "{0}".'.format(action.path))
 
             for remove in location.remove_files + remove_files:
                 full_path = _join_path(source, remove)
 
                 if os.path.isdir(full_path):
-                    for (dirpath, dirnames, filenames) in os.walk(full_path):
+                    for dirpath, dirnames, filenames in os.walk(full_path):
                         parent_path = os.path.relpath(dirpath, source)
 
                         manual_actions.extend(
-                            (Action(_join_path(parent_path, filename), Action.DEL) for filename in filenames))
+                            (
+                                Action(_join_path(parent_path, filename), Action.DEL)
+                                for filename in filenames
+                            )
+                        )
                 else:
                     manual_actions.append(Action(remove, Action.DEL))
 
@@ -187,18 +240,20 @@ class Application:
             used = set()
 
             for command in tracker_actions + manual_actions:
-                actions.extend(definition.apply(work_path, command.path, command.type, used))
+                actions.extend(
+                    definition.apply(work_path, command.path, command.type, used)
+                )
 
             # Update current revision (remote mode)
             if rev_from != rev_to and not location.local:
-                with open(_join_path(work_path, location.state), 'wb') as file:
-                    file.write(revision.serialize().encode('utf-8'))
+                with open(_join_path(work_path, location.state), "wb") as file:
+                    file.write(revision.serialize().encode("utf-8"))
 
                 actions.append(Action(location.state, Action.ADD))
 
             # Display processed actions using console deployer
             if len(actions) < 1:
-                self.logger.info('No deployment required.')
+                self.logger.info("No deployment required.")
 
                 return True
 
@@ -207,7 +262,7 @@ class Application:
             console = ConsoleDeployer(self.logger)
             console.send(work_path, actions)
 
-            if not self.__prompt('Deploy? [Y/N]'):
+            if not self.__prompt("Deploy? [Y/N]"):
                 return True
 
             # Execute processed actions after ordering them by precedence
@@ -218,12 +273,12 @@ class Application:
 
             # Update current revision (local mode)
             if location.local:
-                with open(_join_path(source, location.state), 'wb') as file:
-                    file.write(revision.serialize().encode('utf-8'))
+                with open(_join_path(source, location.state), "wb") as file:
+                    file.write(revision.serialize().encode("utf-8"))
 
         finally:
             shutil.rmtree(work_path)
 
-        self.logger.info('Deployment done.')
+        self.logger.info("Deployment done.")
 
         return True

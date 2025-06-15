@@ -23,22 +23,27 @@ class Source:
         result = urllib.parse.urlparse(self.path)
 
         # Locate path to file or directory on disk
-        if result.scheme == 'file':
+        if result.scheme == "file":
             # Hack: remove leading "/" to restore original path (see function `__load_origin`)
             origin = result.path[1:]
             scope = result.fragment
 
         # Download archive from HTTP endpoint
-        elif result.scheme == 'http' or result.scheme == 'https':
+        elif result.scheme == "http" or result.scheme == "https":
             # https://stackoverflow.com/questions/23212435/permission-denied-to-write-to-my-temporary-file
-            origin = os.path.join(tempfile.gettempdir(), os.urandom(24).hex() + '.' + os.path.splitext(result.path)[1])
+            origin = os.path.join(
+                tempfile.gettempdir(),
+                os.urandom(24).hex() + "." + os.path.splitext(result.path)[1],
+            )
             scope = result.fragment
 
             self.cleaners.append(lambda: os.remove(origin))
 
             try:
-                with urllib.request.urlopen(result._replace(fragment='').geturl()) as input_file:
-                    with open(origin, 'wb') as output_file:
+                with urllib.request.urlopen(
+                    result._replace(fragment="").geturl()
+                ) as input_file:
+                    with open(origin, "wb") as output_file:
                         output_file.write(input_file.read())
             except:
                 self.__exit__(None, None, None)
@@ -46,13 +51,17 @@ class Source:
                 raise
 
         else:
-            self.logger.error('origin has unsupported scheme "{0}"'.format(result.scheme))
+            self.logger.error(
+                'origin has unsupported scheme "{0}"'.format(result.scheme)
+            )
             self.__exit__(None, None, None)
 
         # Open origin directory
         if os.path.isdir(origin):
-            if scope != '':
-                self.logger.error('no sub-path can be specified when origin is a directory')
+            if scope != "":
+                self.logger.error(
+                    "no sub-path can be specified when origin is a directory"
+                )
                 self.__exit__(None, None, None)
 
                 return None
@@ -74,7 +83,9 @@ class Source:
 
             return os.path.normpath(os.path.join(directory.name, scope))
 
-        self.logger.error('Origin path "{0}" is not a directory nor an archive file.'.format(origin))
+        self.logger.error(
+            'Origin path "{0}" is not a directory nor an archive file.'.format(origin)
+        )
 
         return None
 
