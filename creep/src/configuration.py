@@ -31,7 +31,7 @@ class Configuration:
         if self.undefined:
             return []
 
-        elif isinstance(self.value, list):
+        if isinstance(self.value, list):
             position = lambda index: '{parent}[{index}]'.format(index=index, parent=self.position)
 
             return [
@@ -44,44 +44,45 @@ class Configuration:
         return None
 
     def get_include(self, default_filename, ignores):
+        if isinstance(self.value, dict):
+            return Configuration(self.logger, self.path, self.position, self.value, False)
+
         include = self.undefined and '.' or self.value
 
-        if isinstance(include, dict):
-            return Configuration(self.logger, self.path, self.position, include, False)
+        if isinstance(include, str):
+            include_combined = _join_path(os.path.dirname(self.path), include)
 
-        elif isinstance(include, str):
-            config_path = _join_path(os.path.dirname(self.path), include)
-
-            if os.path.isdir(config_path):
-                config_path = _join_path(config_path, default_filename)
-
-            if os.path.isfile(config_path):
-                ignores.append(config_path)
-
-                with open(config_path, 'rb') as file:
-                    contents = file.read().decode('utf-8')
-
-                try:
-                    root = json.loads(contents)
-                except json.JSONDecodeError as error:
-                    self.log_error('Invalid JSON file: {error}', error=error)
-
-                    return None
+            if os.path.isdir(include_combined):
+                include_path = _join_path(include_combined, default_filename)
             else:
-                root = {}
+                include_path = include_combined
 
-            return Configuration(self.logger, config_path, '', root, False)
+            if not os.path.isfile(include_path):
+                return Configuration(self.logger, include_path, '', None, True)
 
-        else:
-            self.log_error('Property must be an object or string')
+            ignores.append(include_path)
 
-            return None
+            with open(include_path, 'rb') as file:
+                contents = file.read().decode('utf-8')
+
+            try:
+                root = json.loads(contents)
+            except json.JSONDecodeError as error:
+                self.log_error('Invalid JSON file: {error}', error=error)
+
+                return None
+
+            return Configuration(self.logger, include_path, '', root, False)
+
+        self.log_error('Property must be an object or string')
+
+        return None
 
     def get_object(self):
         if self.undefined:
             return {}
 
-        elif isinstance(self.value, dict):
+        if isinstance(self.value, dict):
             position = lambda key: '{parent}.{key}'.format(key=key, parent=self.position)
 
             return {
@@ -100,7 +101,7 @@ class Configuration:
         if self.undefined:
             return (default, True)
 
-        elif isinstance(self.value, type):
+        if isinstance(self.value, type):
             return (self.value, True)
 
         self.log_warning('Property must have type "{type}"', type=type)
@@ -424,12 +425,13 @@ def __load_origin(configuration):
         # the URL, removing leading slash from path will give us back the original value of "something".
         original = _join_path(os.path.dirname(configuration.path), origin_url.path)
 
-        return origin_url._replace(scheme='file', path='///' + original).geturl()
+        return origin_url._replace(scheme='file', path='/' + original).geturl()
 
     return origin_value
 
 
 def load(logger, base_directory, object_or_path):
+    # Hack: force add . after configuration path
     configuration = Configuration(logger, os.path.join(base_directory, '.'), '', object_or_path, False)
 
     return __load_definition(logger, configuration)
