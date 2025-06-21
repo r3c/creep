@@ -55,9 +55,6 @@ class Configuration:
 
         return None
 
-    def get_undefined(self, position):
-        return Configuration(self.logger, self.path, position, None, True)
-
     def get_orphan_keys(self) -> List[str]:
         if isinstance(self.value, dict):
             return self.value.keys()
@@ -109,7 +106,7 @@ class Configuration:
         elif not self.undefined:
             self.log_warning("Property must be an object with keys and values")
 
-        return self.get_undefined(position)
+        return Configuration(self.logger, self.path, position, None, True)
 
     def read_object(self) -> Dict[str, Self]:
         result = {}
