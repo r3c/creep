@@ -267,20 +267,22 @@ def __load_environment(parent, ignores):
     return Environment(locations, configuration.path)
 
 
-def __load_location(configuration):
-    append_files = configuration.read_field("append_files").get_value(list, [])
+def __load_location(configuration: Configuration):
+    append_files_list = configuration.read_field("append_files").read_list()
+    append_files = [c.get_value(str, None) for c in append_files_list]
     connection = configuration.read_field("connection").get_value(str, None)
     local = configuration.read_field("local").get_value(bool, False)
     options = configuration.read_field("options").get_value(dict, {})
-    remove_files = configuration.read_field("remove_files").get_value(list, [])
+    remove_files_list = configuration.read_field("remove_files").read_list()
+    remove_files = [c.get_value(str, None) for c in remove_files_list]
     state = configuration.read_field("state").get_value(str, ".creep.rev")
 
     if (
-        not append_files[1]
+        None in append_files
+        or None in remove_files
         or not connection[1]
         or not local[1]
         or not options[1]
-        or not remove_files[1]
         or not state[1]
     ):
         return None
@@ -289,7 +291,7 @@ def __load_location(configuration):
         configuration.log_warning('Ignored unknown property "{key}"', key=key)
 
     return EnvironmentLocation(
-        append_files[0], connection[0], local[0], options[0], remove_files[0], state[0]
+        append_files, connection[0], local[0], options[0], remove_files, state[0]
     )
 
 
