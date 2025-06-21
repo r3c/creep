@@ -3,6 +3,8 @@
 import json
 import os
 
+from typing import List, Self
+
 
 def _join_path(a, b):
     return os.path.normpath(os.path.join(a, b))
@@ -93,8 +95,14 @@ class Configuration:
 
         return None
 
-    def get_undefined(self):
-        return Configuration(self.logger, self.path, self.position, None, True)
+    def get_undefined(self, position):
+        return Configuration(self.logger, self.path, position, None, True)
+
+    def get_orphan_keys(self) -> List[str]:
+        if isinstance(self.value, dict):
+            return self.value.keys()
+
+        return []
 
     def get_value(self, type, default):
         if self.undefined:
@@ -124,3 +132,30 @@ class Configuration:
                 message=message, path=self.path, position=self.position, **kwargs
             )
         )
+
+    def read_field(self, primary: str, alternatives: List[str] = []) -> Self:
+        position = self.position
+
+        if isinstance(self.value, dict):
+            deprecated = False
+
+            for key in [primary] + alternatives:
+                position = "{parent}.{key}".format(key=key, parent=self.position)
+                value = self.value.get(key, None)
+
+                if value is not None:
+                    self.value.pop(key)
+
+                    if deprecated:
+                        self.log_warning(
+                            'Deprecated property "{key}" should be replaced by "{primary}"',
+                            key=key,
+                            primary=primary,
+                        )
+
+                    return Configuration(self.logger, self.path, position, value, False)
+
+        elif not self.undefined:
+            self.log_error("Property must be an object with keys and values")
+
+        return self.get_undefined(position)

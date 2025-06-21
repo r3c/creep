@@ -201,27 +201,6 @@ class Environment:
         self.path = path
 
 
-def __extract_field(parent, source, key, alternatives=[]):
-    value = source.pop(key, None)
-
-    if value is not None:
-        return value
-
-    for alternative in alternatives:
-        value = source.pop(alternative, None)
-
-        if value is not None:
-            value.log_error(
-                'Deprecated property "{alternative}" should be replaced by "{key}"',
-                alternative=alternative,
-                key=key,
-            )
-
-            return value
-
-    return parent.get_undefined()
-
-
 def __load_definition(logger, parent):
     ignores = []
     configuration = parent.get_include(".creep.def", ignores)
@@ -230,14 +209,7 @@ def __load_definition(logger, parent):
         return None
 
     # Read cascades from JSON configuration
-    definition_object = configuration.get_object()
-
-    if definition_object is None:
-        return None
-
-    cascades_array = __extract_field(
-        configuration, definition_object, "cascades"
-    ).get_array()
+    cascades_array = configuration.read_field("cascades").get_array()
 
     if cascades_array is None:
         return None
@@ -248,9 +220,7 @@ def __load_definition(logger, parent):
         return None
 
     # Read modifiers from JSON configuration
-    modifiers_array = __extract_field(
-        configuration, definition_object, "modifiers"
-    ).get_array()
+    modifiers_array = configuration.read_field("modifiers").get_array()
 
     if modifiers_array is None:
         return None
@@ -261,21 +231,15 @@ def __load_definition(logger, parent):
         return None
 
     # Read scalar properties from JSON configuration
-    environment = __load_environment(
-        __extract_field(configuration, definition_object, "environment"), ignores
-    )
-    options = __extract_field(configuration, definition_object, "options").get_value(
-        dict, {}
-    )
-    origin = __load_origin(__extract_field(configuration, definition_object, "origin"))
-    tracker = __extract_field(
-        configuration, definition_object, "tracker", ["source"]
-    ).get_value(str, None)
+    environment = __load_environment(configuration.read_field("environment"), ignores)
+    options = configuration.read_field("options").get_value(dict, {})
+    origin = __load_origin(configuration.read_field("origin"))
+    tracker = configuration.read_field("tracker", ["source"]).get_value(str, None)
 
     if environment is None or not options[1] or origin is None or not tracker[1]:
         return None
 
-    for key in definition_object.keys():
+    for key in configuration.get_orphan_keys():
         configuration.log_warning('Ignored unknown property "{key}"', key=key)
 
     path = configuration.path
@@ -312,29 +276,12 @@ def __load_environment(parent, ignores):
 
 
 def __load_location(configuration):
-    location_object = configuration.get_object()
-
-    if location_object is None:
-        return None
-
-    append_files = __extract_field(
-        configuration, location_object, "append_files"
-    ).get_value(list, [])
-    connection = __extract_field(
-        configuration, location_object, "connection"
-    ).get_value(str, None)
-    local = __extract_field(configuration, location_object, "local").get_value(
-        bool, False
-    )
-    options = __extract_field(configuration, location_object, "options").get_value(
-        dict, {}
-    )
-    remove_files = __extract_field(
-        configuration, location_object, "remove_files"
-    ).get_value(list, [])
-    state = __extract_field(configuration, location_object, "state").get_value(
-        str, ".creep.rev"
-    )
+    append_files = configuration.read_field("append_files").get_value(list, [])
+    connection = configuration.read_field("connection").get_value(str, None)
+    local = configuration.read_field("local").get_value(bool, False)
+    options = configuration.read_field("options").get_value(dict, {})
+    remove_files = configuration.read_field("remove_files").get_value(list, [])
+    state = configuration.read_field("state").get_value(str, ".creep.rev")
 
     if (
         not append_files[1]
@@ -346,7 +293,7 @@ def __load_location(configuration):
     ):
         return None
 
-    for key in location_object.keys():
+    for key in configuration.get_orphan_keys():
         configuration.log_warning('Ignored unknown property "{key}"', key=key)
 
     return EnvironmentLocation(
@@ -355,27 +302,12 @@ def __load_location(configuration):
 
 
 def __load_modifier(configuration):
-    modifier_object = configuration.get_object()
-
-    if modifier_object is None:
-        return None
-
-    chmod = __extract_field(configuration, modifier_object, "chmod").get_value(
-        str, None
-    )
-    filter = __extract_field(configuration, modifier_object, "filter").get_value(
-        str, None
-    )
-    link = __extract_field(configuration, modifier_object, "link").get_value(str, None)
-    modify = __extract_field(
-        configuration, modifier_object, "modify", "adapt"
-    ).get_value(str, None)
-    pattern = __extract_field(configuration, modifier_object, "pattern").get_value(
-        str, None
-    )
-    rename = __extract_field(
-        configuration, modifier_object, "rename", "name"
-    ).get_value(str, None)
+    chmod = configuration.read_field("chmod").get_value(str, None)
+    filter = configuration.read_field("filter").get_value(str, None)
+    link = configuration.read_field("link").get_value(str, None)
+    modify = configuration.read_field("modify", ["adapt"]).get_value(str, None)
+    pattern = configuration.read_field("pattern").get_value(str, None)
+    rename = configuration.read_field("rename", ["name"]).get_value(str, None)
 
     if (
         not chmod[1]
@@ -395,7 +327,7 @@ def __load_modifier(configuration):
     chmod_integer = chmod[0] is not None and int(chmod[0], 8) or None
     pattern_regex = re.compile(pattern[0])
 
-    for key in modifier_object.keys():
+    for key in configuration.get_orphan_keys():
         configuration.log_warning('Ignored unknown property "{key}"', key=key)
 
     return DefinitionModifier(
