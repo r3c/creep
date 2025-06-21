@@ -22,24 +22,6 @@ class Configuration:
     def __repr__(self):
         return str(self.value)
 
-    def get_array(self):
-        if self.undefined:
-            return []
-
-        if isinstance(self.value, list):
-            position = lambda index: "{parent}[{index}]".format(
-                index=index, parent=self.position
-            )
-
-            return [
-                Configuration(self.logger, self.path, position(index), value, False)
-                for index, value in enumerate(self.value)
-            ]
-
-        self.log_error("Property must be an array of elements")
-
-        return None
-
     def get_include(self, default_filename, ignores):
         if isinstance(self.value, dict):
             return Configuration(
@@ -155,7 +137,24 @@ class Configuration:
 
                     return Configuration(self.logger, self.path, position, value, False)
 
+                deprecated = True
+
         elif not self.undefined:
             self.log_error("Property must be an object with keys and values")
 
         return self.get_undefined(position)
+
+    def read_list(self) -> List[Self]:
+        result = []
+
+        if isinstance(self.value, list):
+            for index, value in enumerate(self.value):
+                position = "{parent}[{index}]".format(index=index, parent=self.position)
+                item = Configuration(self.logger, self.path, position, value, False)
+
+                result.append(item)
+
+        elif not self.undefined:
+            self.log_error("Property must be an array of elements")
+
+        return result
