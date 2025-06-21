@@ -209,23 +209,15 @@ def __load_definition(logger, parent):
         return None
 
     # Read cascades from JSON configuration
-    cascades_array = configuration.read_field("cascades").get_array()
-
-    if cascades_array is None:
-        return None
-
-    cascades = [__load_definition(logger, cascade) for cascade in cascades_array]
+    cascades_list = configuration.read_field("cascades").read_list()
+    cascades = [__load_definition(logger, cascade) for cascade in cascades_list]
 
     if None in cascades:
         return None
 
     # Read modifiers from JSON configuration
-    modifiers_array = configuration.read_field("modifiers").get_array()
-
-    if modifiers_array is None:
-        return None
-
-    modifiers = [__load_modifier(modifier) for modifier in modifiers_array]
+    modifiers_list = configuration.read_field("modifiers").read_list()
+    modifiers = [__load_modifier(modifier) for modifier in modifiers_list]
 
     if None in modifiers:
         return None
