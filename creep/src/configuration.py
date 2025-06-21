@@ -140,7 +140,7 @@ class Configuration:
                 deprecated = True
 
         elif not self.undefined:
-            self.log_error("Property must be an object with keys and values")
+            self.log_warning("Property must be an object with keys and values")
 
         return self.get_undefined(position)
 
@@ -155,6 +155,6 @@ class Configuration:
                 result.append(item)
 
         elif not self.undefined:
-            self.log_error("Property must be an array of elements")
+            self.log_warning("Property must be an array of elements")
 
         return result
