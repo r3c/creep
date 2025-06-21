@@ -225,20 +225,25 @@ def _load_definition(logger, parent):
     # Read scalar properties from JSON configuration
     environment = _load_environment(configuration.read_field("environment"), ignores)
     origin = _load_origin(configuration.read_field("origin"))
-    tracker = configuration.read_field("tracker", ["source"]).get_value(str, None)
+    tracker = configuration.read_field("tracker", ["source"]).read_value(str, None)
 
-    if environment is None or origin is None or not tracker[1]:
+    if environment is None or origin is None:
+        return None
+
+    # Read options
+    options_object = configuration.read_field("options").read_object()
+    options = dict((key, c.read_value(str, None)) for key, c in options_object.items())
+
+    if None in options.values():
         return None
 
     for key in configuration.get_orphan_keys():
         configuration.log_warning('Ignored unknown property "{key}"', key=key)
 
-    options_object = configuration.read_field("options").read_object()
-    options = dict((key, c.get_value(str, None)) for key, c in options_object.items())
     path = configuration.path
 
     definition = Definition(
-        logger, origin, environment, tracker[0], options, cascades, modifiers, path
+        logger, origin, environment, tracker, options, cascades, modifiers, path
     )
 
     for ignore in set((os.path.basename(ignore) for ignore in ignores)):
@@ -266,74 +271,53 @@ def _load_environment(parent, ignores):
 
 def _load_location(configuration: Configuration):
     append_files_list = configuration.read_field("append_files").read_list()
-    append_files = [c.get_value(str, None) for c in append_files_list]
-    connection = configuration.read_field("connection").get_value(str, None)
-    local = configuration.read_field("local").get_value(bool, False)
+    append_files = [c.read_value(str, None) for c in append_files_list]
+    connection = configuration.read_field("connection").read_value(str, None)
+    local = configuration.read_field("local").read_value(bool, False)
     options_object = configuration.read_field("options").read_object()
-    options = dict((key, c.get_value(str, None)) for key, c in options_object.items())
+    options = dict((key, c.read_value(str, None)) for key, c in options_object.items())
     remove_files_list = configuration.read_field("remove_files").read_list()
-    remove_files = [c.get_value(str, None) for c in remove_files_list]
-    state = configuration.read_field("state").get_value(str, ".creep.rev")
+    remove_files = [c.read_value(str, None) for c in remove_files_list]
+    state = configuration.read_field("state").read_value(str, ".creep.rev")
 
-    if (
-        None in append_files
-        or None in remove_files
-        or not connection[1]
-        or not local[1]
-        or not state[1]
-    ):
+    if None in append_files or None in remove_files:
         return None
 
     for key in configuration.get_orphan_keys():
         configuration.log_warning('Ignored unknown property "{key}"', key=key)
 
     return EnvironmentLocation(
-        append_files, connection[0], local[0], options, remove_files, state[0]
+        append_files, connection, local, options, remove_files, state
     )
 
 
 def _load_modifier(configuration):
-    chmod = configuration.read_field("chmod").get_value(str, None)
-    filter = configuration.read_field("filter").get_value(str, None)
-    link = configuration.read_field("link").get_value(str, None)
-    modify = configuration.read_field("modify", ["adapt"]).get_value(str, None)
-    pattern = configuration.read_field("pattern").get_value(str, None)
-    rename = configuration.read_field("rename", ["name"]).get_value(str, None)
+    chmod = configuration.read_field("chmod").read_value(str, None)
+    filter = configuration.read_field("filter").read_value(str, None)
+    link = configuration.read_field("link").read_value(str, None)
+    modify = configuration.read_field("modify", ["adapt"]).read_value(str, None)
+    pattern = configuration.read_field("pattern").read_value(str, None)
+    rename = configuration.read_field("rename", ["name"]).read_value(str, None)
 
-    if (
-        not chmod[1]
-        or not filter[1]
-        or not link[1]
-        or not modify[1]
-        or not pattern[1]
-        or not rename[1]
-    ):
-        return None
-
-    if pattern[0] is None:
-        configuration.log_error("Undefined modifier pattern")
+    if pattern is None:
+        configuration.log_warning("Undefined modifier pattern")
 
         return None
 
-    chmod_integer = chmod[0] is not None and int(chmod[0], 8) or None
-    pattern_regex = re.compile(pattern[0])
+    chmod_integer = chmod is not None and int(chmod, 8) or None
+    pattern_regex = re.compile(pattern)
 
     for key in configuration.get_orphan_keys():
         configuration.log_warning('Ignored unknown property "{key}"', key=key)
 
     return DefinitionModifier(
-        pattern_regex, rename[0], link[0], modify[0], chmod_integer, filter[0]
+        pattern_regex, rename, link, modify, chmod_integer, filter
     )
 
 
 def _load_origin(configuration):
-    origin = configuration.get_value(str, ".")
-
-    if not origin[1]:
-        return None
-
-    origin_value = origin[0]
-    origin_url = urllib.parse.urlparse(origin_value)
+    origin = configuration.read_value(str, ".")
+    origin_url = urllib.parse.urlparse(origin)
 
     if origin_url.scheme == "" or origin_url.scheme == "file":
         # Hack: force triple slash before path so urllib preserves them. This will produce a URL with pattern
@@ -343,13 +327,12 @@ def _load_origin(configuration):
 
         return origin_url._replace(scheme="file", path="/" + original).geturl()
 
-    return origin_value
+    return origin
 
 
 def load(logger, base_directory, object_or_path):
     # Hack: force add . after configuration path
-    configuration = Configuration(
-        logger, os.path.join(base_directory, "."), "", object_or_path, False
-    )
+    path = os.path.join(base_directory, ".")
+    configuration = Configuration(logger, path, "", object_or_path, False)
 
     return _load_definition(logger, configuration)
