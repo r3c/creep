@@ -201,7 +201,7 @@ class Environment:
         self.path = path
 
 
-def __load_definition(logger, parent):
+def _load_definition(logger, parent):
     ignores = []
     configuration = parent.get_include(".creep.def", ignores)
 
@@ -210,22 +210,22 @@ def __load_definition(logger, parent):
 
     # Read cascades from JSON configuration
     cascades_list = configuration.read_field("cascades").read_list()
-    cascades = [__load_definition(logger, cascade) for cascade in cascades_list]
+    cascades = [_load_definition(logger, cascade) for cascade in cascades_list]
 
     if None in cascades:
         return None
 
     # Read modifiers from JSON configuration
     modifiers_list = configuration.read_field("modifiers").read_list()
-    modifiers = [__load_modifier(modifier) for modifier in modifiers_list]
+    modifiers = [_load_modifier(modifier) for modifier in modifiers_list]
 
     if None in modifiers:
         return None
 
     # Read scalar properties from JSON configuration
-    environment = __load_environment(configuration.read_field("environment"), ignores)
+    environment = _load_environment(configuration.read_field("environment"), ignores)
     options = configuration.read_field("options").get_value(dict, {})
-    origin = __load_origin(configuration.read_field("origin"))
+    origin = _load_origin(configuration.read_field("origin"))
     tracker = configuration.read_field("tracker", ["source"]).get_value(str, None)
 
     if environment is None or not options[1] or origin is None or not tracker[1]:
@@ -246,19 +246,15 @@ def __load_definition(logger, parent):
     return definition
 
 
-def __load_environment(parent, ignores):
+def _load_environment(parent, ignores):
     configuration = parent.get_include(".creep.env", ignores)
 
     if configuration is None:
         return None
 
-    environment_object = configuration.get_object()
-
-    if environment_object is None:
-        return None
-
+    environment_object = configuration.read_object()
     locations = {
-        name: __load_location(location) for name, location in environment_object.items()
+        name: _load_location(location) for name, location in environment_object.items()
     }
 
     if None in locations.values():
@@ -267,7 +263,7 @@ def __load_environment(parent, ignores):
     return Environment(locations, configuration.path)
 
 
-def __load_location(configuration: Configuration):
+def _load_location(configuration: Configuration):
     append_files_list = configuration.read_field("append_files").read_list()
     append_files = [c.get_value(str, None) for c in append_files_list]
     connection = configuration.read_field("connection").get_value(str, None)
@@ -295,7 +291,7 @@ def __load_location(configuration: Configuration):
     )
 
 
-def __load_modifier(configuration):
+def _load_modifier(configuration):
     chmod = configuration.read_field("chmod").get_value(str, None)
     filter = configuration.read_field("filter").get_value(str, None)
     link = configuration.read_field("link").get_value(str, None)
@@ -329,7 +325,7 @@ def __load_modifier(configuration):
     )
 
 
-def __load_origin(configuration):
+def _load_origin(configuration):
     origin = configuration.get_value(str, ".")
 
     if not origin[1]:
@@ -355,4 +351,4 @@ def load(logger, base_directory, object_or_path):
         logger, os.path.join(base_directory, "."), "", object_or_path, False
     )
 
-    return __load_definition(logger, configuration)
+    return _load_definition(logger, configuration)

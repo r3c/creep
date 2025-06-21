@@ -3,11 +3,7 @@
 import json
 import os
 
-from typing import List, Self
-
-
-def _join_path(a, b):
-    return os.path.normpath(os.path.join(a, b))
+from typing import Dict, List, Self
 
 
 class Configuration:
@@ -31,10 +27,10 @@ class Configuration:
         include = self.undefined and "." or self.value
 
         if isinstance(include, str):
-            include_combined = _join_path(os.path.dirname(self.path), include)
+            include_combined = os.path.join(os.path.dirname(self.path), include)
 
             if os.path.isdir(include_combined):
-                include_path = _join_path(include_combined, default_filename)
+                include_path = os.path.join(include_combined, default_filename)
             else:
                 include_path = include_combined
 
@@ -56,24 +52,6 @@ class Configuration:
             return Configuration(self.logger, include_path, "", root, False)
 
         self.log_error("Property must be an object or string")
-
-        return None
-
-    def get_object(self):
-        if self.undefined:
-            return {}
-
-        if isinstance(self.value, dict):
-            position = lambda key: "{parent}.{key}".format(
-                key=key, parent=self.position
-            )
-
-            return {
-                key: Configuration(self.logger, self.path, position(key), value, False)
-                for key, value in self.value.items()
-            }
-
-        self.log_error("Property must be an object with keys and values")
 
         return None
 
@@ -143,6 +121,23 @@ class Configuration:
             self.log_warning("Property must be an object with keys and values")
 
         return self.get_undefined(position)
+
+    def read_object(self) -> Dict[str, Self]:
+        result = {}
+
+        if isinstance(self.value, dict):
+            for key, value in self.value.items():
+                position = "{parent}.{key}".format(key=key, parent=self.position)
+                item = Configuration(self.logger, self.path, position, value, False)
+
+                result[key] = item
+
+            self.value.clear()
+
+        elif not self.undefined:
+            self.log_warning("Property must be an object with keys and values")
+
+        return result
 
     def read_list(self) -> List[Self]:
         result = []
