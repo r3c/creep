@@ -24,7 +24,7 @@ class Source:
 
         # Locate path to file or directory on disk
         if result.scheme == "file":
-            # Hack: remove leading "/" to restore original path (see function `__load_origin`)
+            # Hack: remove leading "/" to restore original path (see function `_load_origin`)
             origin = result.path[1:]
             scope = result.fragment
 

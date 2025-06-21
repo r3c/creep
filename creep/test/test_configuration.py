@@ -80,6 +80,33 @@ class ConfigurationTester(unittest.TestCase):
         logger_mock.warning.assert_not_called()
 
     @mock.patch("logging.Logger")
+    def test_read_object_incompatible(self, logger_mock):
+        configuration = self.load_object([], logger_mock)
+        configuration.read_object()
+
+        logger_mock.error.assert_not_called()
+        logger_mock.warning.assert_called_once()
+
+        self.assertRegex(
+            logger_mock.warning.call_args.args[0],
+            "Property must be an object with keys and values in .*",
+        )
+
+    @mock.patch("logging.Logger")
+    def test_read_object_valid(self, logger_mock):
+        configuration = self.load_object({"k1": 1, "k2": "2", "k3": False}, logger_mock)
+        configuration_object = configuration.read_object()
+
+        self.assertEqual(len(configuration_object), 3)
+        self.assertEqual(configuration_object["k1"].get_value(int, None)[0], 1)
+        self.assertEqual(configuration_object["k2"].get_value(str, None)[0], "2")
+        self.assertEqual(configuration_object["k3"].get_value(bool, None)[0], False)
+        self.assertListEqual(list(configuration.get_orphan_keys()), [])
+
+        logger_mock.error.assert_not_called()
+        logger_mock.warning.assert_not_called()
+
+    @mock.patch("logging.Logger")
     def test_read_list_incompatible(self, logger_mock):
         configuration = self.load_object({}, logger_mock)
         configuration.read_list()
@@ -101,6 +128,7 @@ class ConfigurationTester(unittest.TestCase):
         self.assertEqual(configuration_list[0].get_value(int, None)[0], 1)
         self.assertEqual(configuration_list[1].get_value(str, None)[0], "2")
         self.assertEqual(configuration_list[2].get_value(bool, None)[0], False)
+        self.assertListEqual(list(configuration.get_orphan_keys()), [])
 
         logger_mock.error.assert_not_called()
         logger_mock.warning.assert_not_called()
