@@ -73,8 +73,8 @@ class ConfigurationTester(unittest.TestCase):
     def test_read_field_valid(self, logger_mock):
         configuration = self.load_object({"f1": 42, "f2": "17"}, logger_mock)
 
-        self.assertEqual(configuration.read_field("f1").get_value(int, None)[0], 42)
-        self.assertEqual(configuration.read_field("f2").get_value(str, None)[0], "17")
+        self.assertEqual(configuration.read_field("f1").read_value(int, None), 42)
+        self.assertEqual(configuration.read_field("f2").read_value(str, None), "17")
 
         logger_mock.error.assert_not_called()
         logger_mock.warning.assert_not_called()
@@ -98,9 +98,9 @@ class ConfigurationTester(unittest.TestCase):
         configuration_object = configuration.read_object()
 
         self.assertEqual(len(configuration_object), 3)
-        self.assertEqual(configuration_object["k1"].get_value(int, None)[0], 1)
-        self.assertEqual(configuration_object["k2"].get_value(str, None)[0], "2")
-        self.assertEqual(configuration_object["k3"].get_value(bool, None)[0], False)
+        self.assertEqual(configuration_object["k1"].read_value(int, None), 1)
+        self.assertEqual(configuration_object["k2"].read_value(str, None), "2")
+        self.assertEqual(configuration_object["k3"].read_value(bool, None), False)
         self.assertListEqual(list(configuration.get_orphan_keys()), [])
 
         logger_mock.error.assert_not_called()
@@ -125,9 +125,9 @@ class ConfigurationTester(unittest.TestCase):
         configuration_list = configuration.read_list()
 
         self.assertEqual(len(configuration_list), 3)
-        self.assertEqual(configuration_list[0].get_value(int, None)[0], 1)
-        self.assertEqual(configuration_list[1].get_value(str, None)[0], "2")
-        self.assertEqual(configuration_list[2].get_value(bool, None)[0], False)
+        self.assertEqual(configuration_list[0].read_value(int, None), 1)
+        self.assertEqual(configuration_list[1].read_value(str, None), "2")
+        self.assertEqual(configuration_list[2].read_value(bool, None), False)
         self.assertListEqual(list(configuration.get_orphan_keys()), [])
 
         logger_mock.error.assert_not_called()

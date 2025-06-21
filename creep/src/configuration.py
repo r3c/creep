@@ -64,17 +64,6 @@ class Configuration:
 
         return []
 
-    def get_value(self, type, default):
-        if self.undefined:
-            return (default, True)
-
-        if isinstance(self.value, type):
-            return (self.value, True)
-
-        self.log_warning('Property must have type "{type}"', type=type)
-
-        return (None, False)
-
     def log_error(self, prefix, **kwargs):
         message = prefix + " in {path}:{position}"
 
@@ -153,3 +142,12 @@ class Configuration:
             self.log_warning("Property must be an array of elements")
 
         return result
+
+    def read_value(self, type, default):
+        if isinstance(self.value, type):
+            return self.value
+
+        elif not self.undefined:
+            self.log_warning('Property must have type "{type}"', type=type)
+
+        return default
