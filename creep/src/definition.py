@@ -224,20 +224,21 @@ def _load_definition(logger, parent):
 
     # Read scalar properties from JSON configuration
     environment = _load_environment(configuration.read_field("environment"), ignores)
-    options = configuration.read_field("options").get_value(dict, {})
     origin = _load_origin(configuration.read_field("origin"))
     tracker = configuration.read_field("tracker", ["source"]).get_value(str, None)
 
-    if environment is None or not options[1] or origin is None or not tracker[1]:
+    if environment is None or origin is None or not tracker[1]:
         return None
 
     for key in configuration.get_orphan_keys():
         configuration.log_warning('Ignored unknown property "{key}"', key=key)
 
+    options_object = configuration.read_field("options").read_object()
+    options = dict((key, c.get_value(str, None)) for key, c in options_object.items())
     path = configuration.path
 
     definition = Definition(
-        logger, origin, environment, tracker[0], options[0], cascades, modifiers, path
+        logger, origin, environment, tracker[0], options, cascades, modifiers, path
     )
 
     for ignore in set((os.path.basename(ignore) for ignore in ignores)):
@@ -268,7 +269,8 @@ def _load_location(configuration: Configuration):
     append_files = [c.get_value(str, None) for c in append_files_list]
     connection = configuration.read_field("connection").get_value(str, None)
     local = configuration.read_field("local").get_value(bool, False)
-    options = configuration.read_field("options").get_value(dict, {})
+    options_object = configuration.read_field("options").read_object()
+    options = dict((key, c.get_value(str, None)) for key, c in options_object.items())
     remove_files_list = configuration.read_field("remove_files").read_list()
     remove_files = [c.get_value(str, None) for c in remove_files_list]
     state = configuration.read_field("state").get_value(str, ".creep.rev")
@@ -278,7 +280,6 @@ def _load_location(configuration: Configuration):
         or None in remove_files
         or not connection[1]
         or not local[1]
-        or not options[1]
         or not state[1]
     ):
         return None
@@ -287,7 +288,7 @@ def _load_location(configuration: Configuration):
         configuration.log_warning('Ignored unknown property "{key}"', key=key)
 
     return EnvironmentLocation(
-        append_files, connection[0], local[0], options[0], remove_files, state[0]
+        append_files, connection[0], local[0], options, remove_files, state[0]
     )
 
 
