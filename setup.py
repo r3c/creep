@@ -33,6 +33,7 @@ setup(
         "Topic :: System :: Archiving :: Mirroring",
         "Topic :: System :: Software Distribution",
     ],
+    python_requires=">=3.11.0",
     install_requires=["setuptools>=1.0"],
     packages=["creep", "creep.src", "creep.src.deployers", "creep.src.trackers"],
     entry_points={"console_scripts": ["creep = creep.creep:main"]},
