@@ -38,7 +38,7 @@ class ConfigurationTester(unittest.TestCase):
         with open(path, "rb") as file:
             root = json.load(file)
 
-            return Configuration(logger, path, "", root, False)
+            return Configuration(logger, [], path, "", root)
 
     def load_object(self, instance: object, logger: logging.Logger) -> Configuration:
         self.create_file("configuration.json", instance)

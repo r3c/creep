@@ -1,14 +1,20 @@
 #!/usr/bin/env python3
 
+import logging
 import os
 import re
 import shlex
 import shutil
+from typing import List
 import urllib.parse
 
 from .action import Action
 from .configuration import Configuration
 from .process import Process
+
+
+definition_default_name = ".creep.def"
+environment_default_name = ".creep.env"
 
 
 def _join_path(a, b):
@@ -201,29 +207,36 @@ class Environment:
         self.path = path
 
 
-def _load_definition(logger, parent):
-    ignores = []
-    configuration = parent.get_include(".creep.def", ignores)
-
-    if configuration is None:
-        return None
-
+def _load_definition(
+    logger: logging.Logger, configuration: Configuration, includes: List[str]
+):
     # Read cascades from JSON configuration
-    cascades_list = configuration.read_field("cascades").read_list()
-    cascades = [_load_definition(logger, cascade) for cascade in cascades_list]
+    cascades = []
 
-    if None in cascades:
-        return None
+    for item in configuration.read_field("cascades").read_list():
+        item.set_default_name(definition_default_name)
+        cascade = _load_definition(logger, item, includes)
+
+        if cascade is None:
+            return None
+
+        cascades.append(cascade)
 
     # Read modifiers from JSON configuration
-    modifiers_list = configuration.read_field("modifiers").read_list()
-    modifiers = [_load_modifier(modifier) for modifier in modifiers_list]
+    modifiers = []
 
-    if None in modifiers:
-        return None
+    for item in configuration.read_field("modifiers").read_list():
+        modifier = _load_modifier(item)
+
+        if modifier is None:
+            return None
+
+        modifiers.append(modifier)
 
     # Read scalar properties from JSON configuration
-    environment = _load_environment(configuration.read_field("environment"), ignores)
+    environment_field = configuration.read_field("environment", [], ".")
+    environment_field.set_default_name(environment_default_name)
+    environment = _load_environment(environment_field)
     origin = _load_origin(configuration.read_field("origin"))
     tracker = configuration.read_field("tracker", ["source"]).read_value(str, None)
 
@@ -231,45 +244,63 @@ def _load_definition(logger, parent):
         return None
 
     # Read options
-    options_object = configuration.read_field("options").read_object()
-    options = dict((key, c.read_value(str, None)) for key, c in options_object.items())
+    options = {}
 
-    if None in options.values():
-        return None
+    for key, value in configuration.read_field("options").read_object().items():
+        option = value.read_value(str, None)
+
+        if option is None:
+            return None
+
+        options[key] = option
 
     for key in configuration.get_orphan_keys():
         configuration.log_warning('Ignored unknown property "{key}"', key=key)
 
-    path = configuration.path
+    # Sanity check
+    if configuration.invalid:
+        return None
 
+    # Build definition and return
     definition = Definition(
-        logger, origin, environment, tracker, options, cascades, modifiers, path
+        logger,
+        origin,
+        environment,
+        tracker,
+        options,
+        cascades,
+        modifiers,
+        configuration.path,
     )
 
-    for ignore in set((os.path.basename(ignore) for ignore in ignores)):
+    # FIXME: this is adding every included base name from every definition into current one, it should be isolated
+    # instead by definition instead.
+    ignores = set(os.path.basename(include) for include in includes)
+
+    for ignore in ignores:
         definition.ignore(ignore)
 
     return definition
 
 
-def _load_environment(parent, ignores):
-    configuration = parent.get_include(".creep.env", ignores)
+def _load_environment(configuration):
+    locations = {}
 
-    if configuration is None:
-        return None
+    for key, value in configuration.read_object().items():
+        location = _load_location(value)
 
-    environment_object = configuration.read_object()
-    locations = {
-        name: _load_location(location) for name, location in environment_object.items()
-    }
+        if location is None:
+            return None
 
-    if None in locations.values():
+        locations[key] = location
+
+    if configuration.invalid:
         return None
 
     return Environment(locations, configuration.path)
 
 
-def _load_location(configuration: Configuration):
+def _load_location(configuration: Configuration) -> EnvironmentLocation | None:
     append_files_list = configuration.read_field("append_files").read_list()
     append_files = [c.read_value(str, None) for c in append_files_list]
     connection = configuration.read_field("connection").read_value(str, None)
@@ -286,12 +317,15 @@ def _load_location(configuration: Configuration):
     for key in configuration.get_orphan_keys():
         configuration.log_warning('Ignored unknown property "{key}"', key=key)
 
+    if configuration.invalid:
+        return None
+
     return EnvironmentLocation(
         append_files, connection, local, options, remove_files, state
     )
 
 
-def _load_modifier(configuration):
+def _load_modifier(configuration) -> DefinitionModifier | None:
     chmod = configuration.read_field("chmod").read_value(str, None)
     filter = configuration.read_field("filter").read_value(str, None)
     link = configuration.read_field("link").read_value(str, None)
@@ -310,12 +344,15 @@ def _load_modifier(configuration):
     for key in configuration.get_orphan_keys():
         configuration.log_warning('Ignored unknown property "{key}"', key=key)
 
+    if configuration.invalid:
+        return None
+
     return DefinitionModifier(
         pattern_regex, rename, link, modify, chmod_integer, filter
     )
 
 
-def _load_origin(configuration):
+def _load_origin(configuration) -> str | None:
     origin = configuration.read_value(str, ".")
     origin_url = urllib.parse.urlparse(origin)
 
@@ -327,12 +364,17 @@ def _load_origin(configuration):
 
         return origin_url._replace(scheme="file", path=original).geturl()
 
+    if configuration.invalid:
+        return None
+
     return origin
 
 
 def load(logger, base_directory, object_or_path):
-    # Hack: force add . after configuration path
-    path = os.path.join(base_directory, ".")
-    configuration = Configuration(logger, path, "", object_or_path, False)
+    includes = []
+    path = os.path.join(base_directory, "dummy")
 
-    return _load_definition(logger, configuration)
+    configuration = Configuration(logger, includes, path, ".", object_or_path)
+    configuration.set_default_name(definition_default_name)
+
+    return _load_definition(logger, configuration, includes)

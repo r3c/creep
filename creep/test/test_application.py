@@ -190,7 +190,7 @@ class ApplicationTester(unittest.TestCase):
             self.assertEqual(len(captured.records), 1)
             self.assertRegex(
                 captured.records[0].getMessage(),
-                "Invalid JSON file.*" + re.escape(self.directory.name),
+                "File " + re.escape(self.directory.name) + ".* is not a valid JSON",
             )
 
     def test_definition_path(self):
@@ -231,7 +231,7 @@ class ApplicationTester(unittest.TestCase):
             self.assertEqual(len(captured.records), 1)
             self.assertRegex(
                 captured.records[0].getMessage(),
-                "Invalid JSON file.*" + re.escape(self.directory.name),
+                "File " + re.escape(self.directory.name) + ".* is not a valid JSON",
             )
 
     def test_environment_path(self):
