@@ -24,8 +24,7 @@ class Source:
 
         # Locate path to file or directory on disk
         if result.scheme == "file":
-            # Hack: remove leading "/" to restore original path (see function `_load_origin`)
-            origin = result.path[1:]
+            origin = result.path
             scope = result.fragment
 
         # Download archive from HTTP endpoint

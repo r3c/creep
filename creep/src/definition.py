@@ -325,7 +325,7 @@ def _load_origin(configuration):
         # the URL, removing leading slash from path will give us back the original value of "something".
         original = _join_path(os.path.dirname(configuration.path), origin_url.path)
 
-        return origin_url._replace(scheme="file", path="/" + original).geturl()
+        return origin_url._replace(scheme="file", path=original).geturl()
 
     return origin
 
