@@ -34,24 +34,6 @@ class Configuration:
 
         return []
 
-    def log_debug(self, prefix, **kwargs):
-        message = prefix + " in {path}:{position}"
-
-        self.logger.debug(
-            message.format(
-                message=message, path=self.path, position=self.position, **kwargs
-            )
-        )
-
-    def log_error(self, prefix, **kwargs):
-        message = prefix + " in {path}:{position}"
-
-        self.logger.error(
-            message.format(
-                message=message, path=self.path, position=self.position, **kwargs
-            )
-        )
-
     def log_warning(self, prefix, **kwargs):
         message = prefix + " in {path}:{position}"
 
@@ -61,7 +43,7 @@ class Configuration:
             )
         )
 
-    def read_field(
+    def open_field(
         self,
         primary_key: str,
         alternative_keys: List[str] = [],
@@ -94,7 +76,7 @@ class Configuration:
 
         return self.__create_child(".{key}".format(key=primary_key), fallback_value)
 
-    def read_object(self) -> Dict[str, Self]:
+    def open_object(self) -> Dict[str, Self]:
         self.__try_include()
 
         result = {}
@@ -112,7 +94,7 @@ class Configuration:
 
         return result
 
-    def read_list(self) -> List[Self]:
+    def open_list(self) -> List[Self]:
         self.__try_include()
 
         result = []
@@ -145,6 +127,15 @@ class Configuration:
 
         return Configuration(self.logger, self.includes, self.path, position, value)
 
+    def __log_debug(self, prefix, **kwargs):
+        message = prefix + " in {path}:{position}"
+
+        self.logger.debug(
+            message.format(
+                message=message, path=self.path, position=self.position, **kwargs
+            )
+        )
+
     def __try_include(self):
         if not isinstance(self.value, str):
             return
@@ -155,7 +146,7 @@ class Configuration:
             self.path = os.path.join(self.path, self.default_name)
 
         if not os.path.isfile(self.path):
-            self.log_debug("File {include} does not exist".format(include=self.path))
+            self.__log_debug("File {include} does not exist".format(include=self.path))
 
             self.value = None
 
