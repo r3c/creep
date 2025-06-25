@@ -209,11 +209,11 @@ class Environment:
 
 def _load_definition(
     logger: logging.Logger, configuration: Configuration, includes: List[str]
-):
+) -> Definition | None:
     # Read cascades from JSON configuration
     cascades = []
 
-    for item in configuration.read_field("cascades").read_list():
+    for item in configuration.open_field("cascades").open_list():
         item.set_default_name(definition_default_name)
         cascade = _load_definition(logger, item, includes)
 
@@ -225,7 +225,7 @@ def _load_definition(
     # Read modifiers from JSON configuration
     modifiers = []
 
-    for item in configuration.read_field("modifiers").read_list():
+    for item in configuration.open_field("modifiers").open_list():
         modifier = _load_modifier(item)
 
         if modifier is None:
@@ -234,11 +234,11 @@ def _load_definition(
         modifiers.append(modifier)
 
     # Read scalar properties from JSON configuration
-    environment_field = configuration.read_field("environment", [], ".")
+    environment_field = configuration.open_field("environment", [], ".")
     environment_field.set_default_name(environment_default_name)
     environment = _load_environment(environment_field)
-    origin = _load_origin(configuration.read_field("origin"))
-    tracker = configuration.read_field("tracker", ["source"]).read_value(str, None)
+    origin = _load_origin(configuration.open_field("origin"))
+    tracker = configuration.open_field("tracker", ["source"]).read_value(str, None)
 
     if environment is None or origin is None:
         return None
@@ -246,7 +246,7 @@ def _load_definition(
     # Read options
     options = {}
 
-    for key, value in configuration.read_field("options").read_object().items():
+    for key, value in configuration.open_field("options").open_object().items():
         option = value.read_value(str, None)
 
         if option is None:
@@ -283,10 +283,10 @@ def _load_definition(
     return definition
 
 
-def _load_environment(configuration):
+def _load_environment(configuration: Configuration) -> Environment | None:
     locations = {}
 
-    for key, value in configuration.read_object().items():
+    for key, value in configuration.open_object().items():
         location = _load_location(value)
 
         if location is None:
@@ -301,15 +301,15 @@ def _load_environment(configuration):
 
 
 def _load_location(configuration: Configuration) -> EnvironmentLocation | None:
-    append_files_list = configuration.read_field("append_files").read_list()
+    append_files_list = configuration.open_field("append_files").open_list()
     append_files = [c.read_value(str, None) for c in append_files_list]
-    connection = configuration.read_field("connection").read_value(str, None)
-    local = configuration.read_field("local").read_value(bool, False)
-    options_object = configuration.read_field("options").read_object()
+    connection = configuration.open_field("connection").read_value(str, None)
+    local = configuration.open_field("local").read_value(bool, False)
+    options_object = configuration.open_field("options").open_object()
     options = dict((key, c.read_value(str, None)) for key, c in options_object.items())
-    remove_files_list = configuration.read_field("remove_files").read_list()
+    remove_files_list = configuration.open_field("remove_files").open_list()
     remove_files = [c.read_value(str, None) for c in remove_files_list]
-    state = configuration.read_field("state").read_value(str, ".creep.rev")
+    state = configuration.open_field("state").read_value(str, ".creep.rev")
 
     if None in append_files or None in remove_files:
         return None
@@ -325,13 +325,13 @@ def _load_location(configuration: Configuration) -> EnvironmentLocation | None:
     )
 
 
-def _load_modifier(configuration) -> DefinitionModifier | None:
-    chmod = configuration.read_field("chmod").read_value(str, None)
-    filter = configuration.read_field("filter").read_value(str, None)
-    link = configuration.read_field("link").read_value(str, None)
-    modify = configuration.read_field("modify", ["adapt"]).read_value(str, None)
-    pattern = configuration.read_field("pattern").read_value(str, None)
-    rename = configuration.read_field("rename", ["name"]).read_value(str, None)
+def _load_modifier(configuration: Configuration) -> DefinitionModifier | None:
+    chmod = configuration.open_field("chmod").read_value(str, None)
+    filter = configuration.open_field("filter").read_value(str, None)
+    link = configuration.open_field("link").read_value(str, None)
+    modify = configuration.open_field("modify", ["adapt"]).read_value(str, None)
+    pattern = configuration.open_field("pattern").read_value(str, None)
+    rename = configuration.open_field("rename", ["name"]).read_value(str, None)
 
     if pattern is None:
         configuration.log_warning("Undefined modifier pattern")
@@ -352,7 +352,7 @@ def _load_modifier(configuration) -> DefinitionModifier | None:
     )
 
 
-def _load_origin(configuration) -> str | None:
+def _load_origin(configuration: Configuration) -> str | None:
     origin = configuration.read_value(str, ".")
     origin_url = urllib.parse.urlparse(origin)
 
