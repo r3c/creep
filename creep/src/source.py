@@ -1,8 +1,9 @@
 import os
 import shutil
 import tempfile
-import urllib.parse
 import urllib.request
+
+from urllib.parse import SplitResult
 
 
 class Source:
@@ -14,35 +15,33 @@ class Source:
     Archive and URL formats also supports an optional sub-path within the archive e.g. "archive.zip#usr/bin/"
     """
 
-    def __init__(self, logger, path):
+    def __init__(self, logger, origin: SplitResult):
         self.cleaners = []
         self.logger = logger
-        self.path = path
+        self.origin = origin
 
     def __enter__(self):
-        result = urllib.parse.urlparse(self.path)
-
         # Locate path to file or directory on disk
-        if result.scheme == "file":
-            origin = result.path
-            scope = result.fragment
+        if self.origin.scheme == "" or self.origin.scheme == "file":
+            head = self.origin.path
+            tail = self.origin.fragment
 
         # Download archive from HTTP endpoint
-        elif result.scheme == "http" or result.scheme == "https":
+        elif self.origin.scheme == "http" or self.origin.scheme == "https":
             # https://stackoverflow.com/questions/23212435/permission-denied-to-write-to-my-temporary-file
-            origin = os.path.join(
+            head = os.path.join(
                 tempfile.gettempdir(),
-                os.urandom(24).hex() + "." + os.path.splitext(result.path)[1],
+                os.urandom(24).hex() + "." + os.path.splitext(self.origin.path)[1],
             )
-            scope = result.fragment
+            tail = self.origin.fragment
 
-            self.cleaners.append(lambda: os.remove(origin))
+            self.cleaners.append(lambda: os.remove(head))
 
             try:
                 with urllib.request.urlopen(
-                    result._replace(fragment="").geturl()
+                    self.origin._replace(fragment="").geturl()
                 ) as input_file:
-                    with open(origin, "wb") as output_file:
+                    with open(head, "wb") as output_file:
                         output_file.write(input_file.read())
             except:
                 self.__exit__(None, None, None)
@@ -51,13 +50,16 @@ class Source:
 
         else:
             self.logger.error(
-                'origin has unsupported scheme "{0}"'.format(result.scheme)
+                'origin has unsupported scheme "{0}"'.format(self.origin.scheme)
             )
+
             self.__exit__(None, None, None)
 
+            return None
+
         # Open origin directory
-        if os.path.isdir(origin):
-            if scope != "":
+        if os.path.isdir(head):
+            if tail != "":
                 self.logger.error(
                     "no sub-path can be specified when origin is a directory"
                 )
@@ -65,25 +67,25 @@ class Source:
 
                 return None
 
-            return origin
+            return head
 
         # ...or extract from archive
-        elif os.path.isfile(origin):
+        elif os.path.isfile(head):
             directory = tempfile.TemporaryDirectory()
 
             self.cleaners.append(lambda: directory.cleanup())
 
             try:
-                shutil.unpack_archive(origin, directory.name)
+                shutil.unpack_archive(head, directory.name)
             except:
                 self.__exit__(None, None, None)
 
                 raise
 
-            return os.path.normpath(os.path.join(directory.name, scope))
+            return os.path.normpath(os.path.join(directory.name, tail))
 
         self.logger.error(
-            'Origin path "{0}" is not a directory nor an archive file.'.format(origin)
+            'Origin path "{0}" is not a directory nor an archive file.'.format(head)
         )
 
         return None

@@ -2,6 +2,7 @@
 
 from . import factory, path
 from .action import Action
+from .definition import Definition
 from .revision import Revision
 from .source import Source
 
@@ -21,7 +22,13 @@ class Application:
         self.yes = yes
 
     def run(
-        self, definition, location_names, append_files, remove_files, rev_from, rev_to
+        self,
+        definition: Definition,
+        location_names,
+        append_files,
+        remove_files,
+        rev_from,
+        rev_to,
     ):
         # Compute origin path relative to definition file
         with Source(self.logger, definition.origin) as path:

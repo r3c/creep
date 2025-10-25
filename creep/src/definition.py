@@ -5,8 +5,10 @@ import os
 import re
 import shlex
 import shutil
-from typing import List
 import urllib.parse
+
+from typing import List
+from urllib.parse import SplitResult
 
 from .action import Action
 from .configuration import Configuration
@@ -35,7 +37,15 @@ class DefinitionModifier:
 class Definition:
 
     def __init__(
-        self, logger, origin, environment, tracker, options, cascades, modifiers, path
+        self,
+        logger,
+        origin: SplitResult,
+        environment,
+        tracker,
+        options,
+        cascades,
+        modifiers,
+        path,
     ):
         self.cascades = cascades
         self.environment = environment
@@ -352,20 +362,12 @@ def _load_modifier(configuration: Configuration) -> DefinitionModifier | None:
     )
 
 
-def _load_origin(configuration: Configuration) -> str | None:
-    origin = configuration.read_value(str, ".")
-    origin_url = urllib.parse.urlparse(origin)
+def _load_origin(configuration: Configuration) -> SplitResult | None:
+    origin = urllib.parse.urlsplit(str(configuration.read_value(str, ".")))
 
-    if origin_url.scheme == "" or origin_url.scheme == "file":
-        # Hack: force triple slash before path so urllib preserves them. This will produce a URL with pattern
-        # "file:///something" where "something" can be an absolute (starting with /) or relative path. After parsing
-        # the URL, removing leading slash from path will give us back the original value of "something".
-        original = _join_path(os.path.dirname(configuration.path), origin_url.path)
-
-        return origin_url._replace(scheme="file", path=original).geturl()
-
-    if configuration.invalid:
-        return None
+    if origin.scheme == "" or origin.scheme == "file":
+        relative_path = _join_path(os.path.dirname(configuration.path), origin.path)
+        origin = origin._replace(path=relative_path)
 
     return origin
 
