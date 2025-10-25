@@ -3,6 +3,7 @@ import shutil
 import tempfile
 import urllib.request
 
+from logging import Logger
 from urllib.parse import SplitResult
 
 
@@ -15,7 +16,7 @@ class Source:
     Archive and URL formats also supports an optional sub-path within the archive e.g. "archive.zip#usr/bin/"
     """
 
-    def __init__(self, logger, origin: SplitResult):
+    def __init__(self, logger: Logger, origin: SplitResult):
         self.cleaners = []
         self.logger = logger
         self.origin = origin

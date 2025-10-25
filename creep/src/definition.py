@@ -7,6 +7,7 @@ import shlex
 import shutil
 import urllib.parse
 
+from logging import Logger
 from typing import List
 from urllib.parse import SplitResult
 
@@ -19,13 +20,21 @@ definition_default_name = ".creep.def"
 environment_default_name = ".creep.env"
 
 
-def _join_path(a, b):
+def _join_path(a: str, b: str) -> str:
     return os.path.normpath(os.path.join(a, b))
 
 
 class DefinitionModifier:
 
-    def __init__(self, regex, rename, link, modify, chmod, filter):
+    def __init__(
+        self,
+        regex: re.Pattern,
+        rename,
+        link,
+        modify,
+        chmod: int | None,
+        filter: str | None,
+    ):
         self.chmod = chmod
         self.filter = filter
         self.link = link
@@ -38,9 +47,9 @@ class Definition:
 
     def __init__(
         self,
-        logger,
+        logger: Logger,
         origin: SplitResult,
-        environment,
+        environment: Environment,
         tracker,
         options,
         cascades,

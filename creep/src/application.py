@@ -3,6 +3,7 @@
 from . import factory, path
 from .action import Action
 from .definition import Definition
+from .logger import IndentLoggerAdapter
 from .revision import Revision
 from .source import Source
 
@@ -17,18 +18,18 @@ def _join_path(a, b):
 
 class Application:
 
-    def __init__(self, logger, yes):
+    def __init__(self, logger: IndentLoggerAdapter, yes: bool):
         self.logger = logger
         self.yes = yes
 
     def run(
         self,
         definition: Definition,
-        location_names,
-        append_files,
-        remove_files,
-        rev_from,
-        rev_to,
+        location_names: list[str],
+        append_files: list[str],
+        remove_files: list[str],
+        rev_from: str | None,
+        rev_to: str | None,
     ):
         # Compute origin path relative to definition file
         with Source(self.logger, definition.origin) as path:
@@ -94,7 +95,7 @@ class Application:
 
         return True
 
-    def __prompt(self, question):
+    def __prompt(self, question: str):
         if self.yes:
             return True
 

@@ -4,15 +4,13 @@ import json
 import logging
 import os
 
-from typing import Dict, List, Self
-
 
 class Configuration:
 
     def __init__(
         self,
         logger: logging.Logger,
-        includes: List[str],
+        includes: list[str],
         path: str,
         position: str,
         value: any,
@@ -28,7 +26,7 @@ class Configuration:
     def __repr__(self):
         return str(self.value)
 
-    def get_orphan_keys(self) -> List[str]:
+    def get_orphan_keys(self) -> list[str]:
         if isinstance(self.value, dict):
             return self.value.keys()
 
@@ -46,9 +44,9 @@ class Configuration:
     def open_field(
         self,
         primary_key: str,
-        alternative_keys: List[str] = [],
+        alternative_keys: list[str] = [],
         fallback_value: any = None,
-    ) -> Self:
+    ) -> Configuration:
         self.__try_include()
 
         if isinstance(self.value, dict):
@@ -76,7 +74,7 @@ class Configuration:
 
         return self.__create_child(".{key}".format(key=primary_key), fallback_value)
 
-    def open_object(self) -> Dict[str, Self]:
+    def open_object(self) -> dict[str, Configuration]:
         self.__try_include()
 
         result = {}
@@ -94,7 +92,7 @@ class Configuration:
 
         return result
 
-    def open_list(self) -> List[Self]:
+    def open_list(self) -> list[Configuration]:
         self.__try_include()
 
         result = []
