@@ -36,7 +36,7 @@ class Process:
             stdout=subprocess.PIPE,
         )
 
-        (out, err) = process.communicate(self.input)
+        out, err = process.communicate(self.input)
 
         return ProcessResult(process.returncode, out, err)
 

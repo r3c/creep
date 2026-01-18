@@ -37,7 +37,7 @@ def explode(path):
     tail = "."
 
     while tail != "":
-        (path, tail) = os.path.split(path)
+        path, tail = os.path.split(path)
 
         if tail != "":
             names.insert(0, tail)
