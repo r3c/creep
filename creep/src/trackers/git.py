@@ -88,7 +88,7 @@ class GitTracker:
             return []
 
         # Populate work directory from Git archive
-        (temp_file, temp_path) = tempfile.mkstemp()
+        temp_file, temp_path = tempfile.mkstemp()
 
         try:
             os.close(temp_file)
@@ -129,14 +129,14 @@ class GitTracker:
         actions = []
 
         for line in diff.out.decode("utf-8").splitlines():
-            (mode, path) = line.split("\t", 1)
+            mode, path = line.split("\t", 1)
 
             if mode == "A" or mode == "M":
                 actions.append(Action(path, Action.ADD))
             elif mode == "D":
                 actions.append(Action(path, Action.DEL))
             elif mode.startswith("R"):
-                (path_del, path_add) = path.split("\t", 1)
+                path_del, path_add = path.split("\t", 1)
 
                 actions.append(Action(path_add, Action.ADD))
                 actions.append(Action(path_del, Action.DEL))

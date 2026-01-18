@@ -14,7 +14,6 @@ from .action import Action
 from .configuration import Configuration
 from .process import Process
 
-
 definition_default_name = ".creep.def"
 environment_default_name = ".creep.env"
 
