@@ -31,7 +31,7 @@ convenient but not mandatory, you can call Creep using full path to `creep.py`:
 
 	$ git clone https://github.com/r3c/creep.git
 	$ cd creep
-	$ sudo ln -s creep/creep.py /usr/bin/creep
+	$ sudo ln -s src/creep/creep.py /usr/bin/creep
 	$ creep -h # display help
 
 After installation go to your project folder and continue reading to deploy your

@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "creep"
-version = "0.5.2"
+version = "0.6.0"
 authors = [{ name = "Remi Caput", email = "v.python.org+creep@mirari.fr" }]
 description = "Incremental FTP/SSH deployment tool"
 readme = "readme.md"
