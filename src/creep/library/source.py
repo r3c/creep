@@ -76,16 +76,42 @@ class Source:
             self.cleaners.append(lambda: directory.cleanup())
 
             try:
-                shutil.unpack_archive(head, directory.name)
+                # Format must be specified to `shutil.unpack_archive` for `filter` to be taken into account
+                # https://github.com/python/cpython/issues/112760
+                if head.endswith((".tar.gz", ".tgz")):
+                    filter = "data"
+                    format = "gztar"
+                elif head.endswith((".tar.bz2", ".tbz2")):
+                    filter = "data"
+                    format = "bztar"
+                elif head.endswith((".tar.xz", ".txz")):
+                    filter = "data"
+                    format = "xztar"
+                elif head.endswith((".tar")):
+                    filter = "data"
+                    format = "tar"
+                elif head.endswith((".zip")):
+                    filter = None
+                    format = "zip"
+                else:
+                    filter = None
+                    format = None
+
+                if format is not None:
+                    shutil.unpack_archive(
+                        head, directory.name, format=format, filter=filter
+                    )
+
+                    return os.path.normpath(os.path.join(directory.name, tail))
             except:
                 self.__exit__(None, None, None)
 
                 raise
 
-            return os.path.normpath(os.path.join(directory.name, tail))
-
         self.logger.error(
-            'Origin path "{0}" is not a directory nor an archive file.'.format(head)
+            'Origin path "{0}" is not a directory nor a supported archive file.'.format(
+                head
+            )
         )
 
         return None
