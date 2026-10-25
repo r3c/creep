@@ -8,12 +8,12 @@ import sys
 
 sys.path.append(os.path.dirname(__file__))
 
-from src import Application, Logger, load
+from src import Application, Logger, load, current_version
 
 
 def main():
     parser = argparse.ArgumentParser(
-        prog="Creep",
+        prog="creep",
         description="Perform incremental deployment from workspace to remote directory.",
     )
 
@@ -97,6 +97,8 @@ def main():
         default=logging.INFO,
         help="Verbose mode, display extra information",
     )
+
+    parser.add_argument("--version", action="version", version=current_version)
 
     parser.add_argument(
         "-y",

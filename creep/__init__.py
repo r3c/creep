@@ -1,3 +1,5 @@
 #!/usr/bin/env python3
 
-__version__ = "0.5.2"
+from .src import current_version
+
+__version__ = current_version
