@@ -1,0 +1,31 @@
+[build-system]
+requires = ["hatchling >= 1.26"]
+build-backend = "hatchling.build"
+
+[project]
+name = "creep"
+version = "0.5.2"
+authors = [{ name = "Remi Caput", email = "v.python.org+creep@mirari.fr" }]
+description = "Incremental FTP/SSH deployment tool"
+readme = "readme.md"
+requires-python = ">=3.11"
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Programming Language :: Python :: 3",
+    "Operating System :: OS Independent",
+    "Topic :: Software Development :: Build Tools",
+    "Topic :: System :: Archiving :: Mirroring",
+    "Topic :: System :: Software Distribution",
+]
+license = "MIT"
+license-files = ["license.md"]
+
+[project.scripts]
+creep = "creep.creep:main"
+
+[project.urls]
+Issues = "https://github.com/r3c/creep/issues"
+Homepage = "https://github.com/r3c/creep"
+
+[tool.pytest.ini_options]
+testpaths = ["test"]

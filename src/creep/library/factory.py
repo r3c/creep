@@ -5,7 +5,6 @@ from . import path
 
 import os
 import re
-import urllib
 
 
 def _detect_tracker(directory):

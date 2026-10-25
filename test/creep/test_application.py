@@ -11,9 +11,9 @@ import tarfile
 import tempfile
 import unittest
 
-sys.path.append(os.path.dirname(os.path.dirname(__file__)))
+sys.path.append(os.path.join(os.path.dirname(__file__), "..", "..", "src"))
 
-from src import Application, Logger, load
+from creep.library import Application, Logger, load
 
 
 class ApplicationTester(unittest.TestCase):
