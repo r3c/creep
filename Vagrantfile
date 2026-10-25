@@ -2,13 +2,14 @@
 # vi: set ft=ruby :
 
 Vagrant.configure("2") do |config|
-  config.vm.box = "ubuntu/hirsute64"
+  config.vm.box = "bento/ubuntu-24.04"
 
   config.vm.provision "shell", inline: <<-SHELL
-    sudo apt update
-    sudo apt install -y python3-venv python3-pip
-    python3 -m pip install --upgrade build
-    python3 -m pip install --upgrade twine
+    mkdir -p /opt/creep
+    sudo chown vagrant:vagrant /opt/creep
+    cd /opt/creep
+    source bin/activate
+    python3 -m pip install --upgrade build pytest setuptools twine wheel
     python3 -m build /vagrant/
   SHELL
 

@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import argparse
+import importlib.metadata
 import json
 import logging
 import os
@@ -8,10 +9,15 @@ import sys
 
 sys.path.append(os.path.dirname(__file__))
 
-from src import Application, Logger, load, current_version
+from library import Application, Logger, load
 
 
 def main():
+    try:
+        version = importlib.metadata.version("creep")
+    except importlib.metadata.PackageNotFoundError:
+        version = "unknown"
+
     parser = argparse.ArgumentParser(
         prog="creep",
         description="Perform incremental deployment from workspace to remote directory.",
@@ -98,7 +104,7 @@ def main():
         help="Verbose mode, display extra information",
     )
 
-    parser.add_argument("--version", action="version", version=current_version)
+    parser.add_argument("--version", action="version", version=version)
 
     parser.add_argument(
         "-y",

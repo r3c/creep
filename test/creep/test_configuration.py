@@ -9,9 +9,9 @@ import unittest
 
 from unittest import mock
 
-sys.path.append(os.path.dirname(os.path.dirname(__file__)))
+sys.path.append(os.path.join(os.path.dirname(__file__), "..", "..", "src"))
 
-from src.configuration import Configuration
+from creep.library.configuration import Configuration
 
 
 class ConfigurationTester(unittest.TestCase):
